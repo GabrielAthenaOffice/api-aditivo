@@ -1,48 +1,90 @@
 package com.formulario.athena.config;
 
+import com.formulario.athena.dto.CustomerResponse;
 import com.formulario.athena.model.ClientData;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.Map;
 
-@Service
+@Component
 public class ConexaClientService {
 
     @Autowired
-    private WebClient.Builder webClientBuilder;
+    private WebClient webClient;
 
-    public Mono<ClientData> buscarClientePorNome(String nome) {
-        WebClient conexaClient = webClientBuilder.baseUrl("http://localhost:5000").build();
-
-        return conexaClient.get()
+    public ClientData buscarClientePorNome(String nome) {
+        List<CustomerResponse> response = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/conexa/buscar-por-nome")
                         .queryParam("nome", nome)
                         .build())
                 .retrieve()
-                .bodyToMono(List.class)
-                .flatMap(lista -> {
+                .bodyToFlux(CustomerResponse.class)
+                .collectList()
+                .block(); // <- você pode trocar por reativo depois
 
-                    if (lista.isEmpty()) {
-                        return Mono.error(new RuntimeException("Cliente não encontrado no Conexa"));
-                    }
+        if (response == null || response.isEmpty()) {
+            throw new RuntimeException("Cliente não encontrado no Conexa: " + nome);
+        }
 
-                    Map<String, Object> cliente = (Map<String, Object>) lista.get(0);
+        CustomerResponse customer = response.getFirst(); // pega o primeiro
 
-                    // Monta o ClientData a partir do JSON retornado
-                    return Mono.just(ClientData.builder()
-                            .nome((String) cliente.get("name"))
-                            .email(((List<String>) cliente.get("emailsMessage")).get(0))
-                            .telefone(((List<String>) cliente.get("phones")).get(0))
-                            .cpf("123.456.789-00") // Ajustar depois conforme origem real
-                            .cnpj("12.345.678/0001-99")
-                            .dataInicio("01/09/2025")
-                            .build());
-                });
+        return ClientData.builder()
+                .nome(customer.getName())
+                .cpf(extrairCpf(customer))
+                .cnpj(extrairCnpj(customer))
+                .email(extrairEmail(customer))
+                .telefone(extrairTelefone(customer))
+                .endereco(extrairEnderecoCompleto(customer))
+                .build();
+    }
+
+    private String extrairCpf(CustomerResponse customer) {
+        // Por enquanto não existe campo de CPF explícito no retorno
+        // Pode estar em outro endpoint ou cadastro do Conexa
+        if (customer.getLegalPerson() == null) {
+            return "CPF-DESCONHECIDO"; // placeholder
+        }
+        return null; // Se for PJ não terá CPF
+    }
+
+    private String extrairCnpj(CustomerResponse customer) {
+        return customer.getLegalPerson() != null
+                ? customer.getLegalPerson().getCnpj()
+                : null;
+    }
+
+    private String extrairEmail(CustomerResponse customer) {
+        return (customer.getEmailsMessage() != null && !customer.getEmailsMessage().isEmpty())
+                ? customer.getEmailsMessage().getFirst()
+                : null;
+    }
+
+    private String extrairTelefone(CustomerResponse customer) {
+        return (customer.getPhones() != null && !customer.getPhones().isEmpty())
+                ? customer.getPhones().getFirst()
+                : null;
+    }
+
+    private String extrairEnderecoCompleto(CustomerResponse customer) {
+        if (customer.getAddress() == null) {
+            return null;
+        }
+
+        CustomerResponse.Address addr = customer.getAddress();
+
+        return String.format("%s, %s - %s, %s/%s, CEP: %s",
+                safe(addr.getStreet()),
+                safe(addr.getNumber()),
+                safe(addr.getNeighborhood()),
+                safe(addr.getCity()),
+                addr.getState() != null ? addr.getState().getAbbreviation() : "",
+                safe(addr.getZipCode()));
+    }
+
+    private String safe(String value) {
+        return value != null ? value : "";
     }
 }

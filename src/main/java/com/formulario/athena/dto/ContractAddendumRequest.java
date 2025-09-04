@@ -18,6 +18,9 @@ public class ContractAddendumRequest {
     @NotBlank
     private String email;
 
+    private String endereco;
+    private String dataInicioContrato;
+
     // futuramente multipart para contrato social
     // Novo campo: nome da empresa na API de correspondências
     private String nomeEmpresa;

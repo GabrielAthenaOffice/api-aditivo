@@ -10,28 +10,26 @@ import java.util.Map;
 @Component
 public class PlaceholderMapper {
 
-    public Map<String, String> gerarPlaceholders(ContractAddendumRequest request, Map<String, Object> dadosCorrespondencia) {
+    /**
+     * Gera placeholders para o documento do ZapSign
+     * @param request Dados recebidos do formulário
+     * @return Map com as chaves exatamente iguais às variáveis do modelo ZapSign
+     */
+    public Map<String, String> gerarPlaceholders(ContractAddendumRequest request) {
         Map<String, String> placeholders = new HashMap<>();
 
-        // Dados do formulário
-        placeholders.put("contratante", request.getNome());
-        placeholders.put("cpf", request.getCpf());
-        placeholders.put("cnpj", request.getCnpj());
-        placeholders.put("email", request.getEmail());
+        // Dados principais do cliente
+        placeholders.put("CONTRATANTE", request.getNome());
+        placeholders.put("CPF", request.getCpf());
+        placeholders.put("CNPJ", request.getCnpj());
+        placeholders.put("EMAIL", request.getEmail());
 
-        // Dados vindos da API de correspondências
-        if (dadosCorrespondencia != null) {
-            placeholders.put("endereco_completo", (String) dadosCorrespondencia.getOrDefault("endereco", "ENDEREÇO NÃO INFORMADO"));
-            placeholders.put("contratante_pessoa_juridica", (String) dadosCorrespondencia.getOrDefault("nome_empresa", request.getNome()));
-            placeholders.put("data_inicio_contrato", (String) dadosCorrespondencia.getOrDefault("data_inicio_contrato", "01/09/2025"));
-
-        }
-
-        // Campos adicionais
-        placeholders.put("dados_pessoais", "CNPJ: " + request.getCnpj() + " | Email: " + request.getEmail());
-        placeholders.put("novo_contratante_razao_social", request.getNome());
-        placeholders.put("contratante_pessoa_fisica", request.getNome());
+        // Campos específicos do aditivo contratual
+        placeholders.put("ENDERECO", request.getEndereco() != null ? request.getEndereco() : "");
+        placeholders.put("DATA_INICIO", request.getDataInicioContrato() != null ? request.getDataInicioContrato() : "");
+        placeholders.put("CONTRATANTE_PJ", request.getNomeEmpresa() != null ? request.getNomeEmpresa() : "");
 
         return placeholders;
     }
 }
+

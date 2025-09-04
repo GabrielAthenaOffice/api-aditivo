@@ -19,10 +19,15 @@ public class AditivoController {
     private ZapSignService zapSignService;
 
     @PostMapping
-    public ResponseEntity<Mono<String>> criarAditivo(@RequestBody AditivoContratualDTO dto) {
-        Mono<String> jsonResponse = zapSignService.criarDocumentoViaModelo(dto);
-
-        return new ResponseEntity<>(jsonResponse, HttpStatus.OK);
+    public Mono<ResponseEntity<String>> criarAditivo(@RequestBody AditivoContratualDTO dto) {
+        return zapSignService.criarDocumentoViaModelo(dto)
+                .map(ResponseEntity::ok)
+                .onErrorResume(IllegalArgumentException.class, ex ->
+                        Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage()))
+                )
+                .onErrorResume(Exception.class, ex ->
+                        Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao criar aditivo: " + ex.getMessage()))
+                );
     }
 
 }

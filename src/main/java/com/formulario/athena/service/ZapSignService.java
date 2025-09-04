@@ -25,20 +25,28 @@ public class ZapSignService {
     @Autowired
     private ConexaClientService conexaClientService;
 
-    @Value("${zapsign.api.template-id}")
+    @Value("${zapsign.api.token.model")
     private String templateId;
 
     public ZapSignService(WebClient.Builder builder,
                           @Value("${zapsign.api.url}") String zapSignUrl,
-                          @Value("${zapsign.api.token}") String token) {
+                          @Value("${zapsign.api.token}") String token,
+                          ConexaClientService conexaClientService) {
 
         this.zapSignWebClient = builder
                 .baseUrl(zapSignUrl)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Token " + token)
                 .build();
+        this.conexaClientService = conexaClientService;
     }
 
-    public Mono<String> criarDocumentoViaModelo(AditivoContratualDTO contratualDTO, ClientData clientData) {
+    public Mono<String> criarDocumentoViaModelo(AditivoContratualDTO contratualDTO) {
+        // Buscar dados do cliente no Conexa
+        ClientData clientData = conexaClientService.buscarClientePorNome(contratualDTO.getContratante());
+
+        if (clientData == null) {
+            return Mono.error(new IllegalArgumentException("Cliente não encontrado no Conexa: " + contratualDTO.getContratante()));
+        }
 
         Map<String, Object> requestBody = Map.of(
                 "template_id", templateId,
@@ -52,7 +60,7 @@ public class ZapSignService {
                 "variables", Map.of(
                         "CONTRATANTE", clientData.getNome(),
                         "CPF", clientData.getCpf(),
-                        "ENDEREÇO COMPLETO", contratualDTO.getEndereco(),
+                        "ENDEREÇO COMPLETO", clientData.getEndereco(),
                         "DATA DE INÍCIO DO CONTRATO", contratualDTO.getDataInicioContrato(),
                         "CONTRATANTE PESSOA JURÍDICA", contratualDTO.getContratantePessoaJuridica(),
                         "CNPJ", clientData.getCnpj()
