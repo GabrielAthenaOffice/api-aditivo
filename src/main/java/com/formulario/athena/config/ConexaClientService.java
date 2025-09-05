@@ -12,79 +12,44 @@ import java.util.List;
 public class ConexaClientService {
 
     @Autowired
-    private WebClient webClient;
+    private WebClient conexaClient;
 
     public ClientData buscarClientePorNome(String nome) {
-        List<CustomerResponse> response = webClient.get()
+        // seu endpoint retorna uma lista; pegue o primeiro ou trate conforme sua regra
+        return conexaClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/conexa/buscar-por-nome")
                         .queryParam("nome", nome)
                         .build())
                 .retrieve()
                 .bodyToFlux(CustomerResponse.class)
-                .collectList()
-                .block(); // <- você pode trocar por reativo depois
+                .map(this::mapToClientData)
+                .next()
+                .block();
+    }
 
-        if (response == null || response.isEmpty()) {
-            throw new RuntimeException("Cliente não encontrado no Conexa: " + nome);
+    private ClientData mapToClientData(CustomerResponse r) {
+        String endereco = null;
+        if (r.getAddress() != null) {
+            endereco = String.format(
+                    "%s, %s - %s, %s - %s, %s",
+                    safe(r.getAddress().getStreet()),
+                    safe(r.getAddress().getNumber()),
+                    safe(r.getAddress().getNeighborhood()),
+                    safe(r.getAddress().getCity()),
+                    r.getAddress().getState() != null ? safe(r.getAddress().getState().getAbbreviation()) : "",
+                    safe(r.getAddress().getZipCode())
+            ).replaceAll(",\\s*,", ", ");
         }
-
-        CustomerResponse customer = response.getFirst(); // pega o primeiro
-
         return ClientData.builder()
-                .nome(customer.getName())
-                .cpf(extrairCpf(customer))
-                .cnpj(extrairCnpj(customer))
-                .email(extrairEmail(customer))
-                .telefone(extrairTelefone(customer))
-                .endereco(extrairEnderecoCompleto(customer))
+                .nome(r.getName())
+                .cpf(null)            // pode vir do seu formulário
+                .cnpj(null)           // idem
+                .email(r.getEmailsMessage() != null && !r.getEmailsMessage().isEmpty() ? r.getEmailsMessage().get(0) : null)
+                .telefone(r.getPhones() != null && !r.getPhones().isEmpty() ? r.getPhones().get(0) : null)
+                .endereco(endereco)
                 .build();
     }
 
-    private String extrairCpf(CustomerResponse customer) {
-        // Por enquanto não existe campo de CPF explícito no retorno
-        // Pode estar em outro endpoint ou cadastro do Conexa
-        if (customer.getLegalPerson() == null) {
-            return "CPF-DESCONHECIDO"; // placeholder
-        }
-        return null; // Se for PJ não terá CPF
-    }
-
-    private String extrairCnpj(CustomerResponse customer) {
-        return customer.getLegalPerson() != null
-                ? customer.getLegalPerson().getCnpj()
-                : null;
-    }
-
-    private String extrairEmail(CustomerResponse customer) {
-        return (customer.getEmailsMessage() != null && !customer.getEmailsMessage().isEmpty())
-                ? customer.getEmailsMessage().getFirst()
-                : null;
-    }
-
-    private String extrairTelefone(CustomerResponse customer) {
-        return (customer.getPhones() != null && !customer.getPhones().isEmpty())
-                ? customer.getPhones().getFirst()
-                : null;
-    }
-
-    private String extrairEnderecoCompleto(CustomerResponse customer) {
-        if (customer.getAddress() == null) {
-            return null;
-        }
-
-        CustomerResponse.Address addr = customer.getAddress();
-
-        return String.format("%s, %s - %s, %s/%s, CEP: %s",
-                safe(addr.getStreet()),
-                safe(addr.getNumber()),
-                safe(addr.getNeighborhood()),
-                safe(addr.getCity()),
-                addr.getState() != null ? addr.getState().getAbbreviation() : "",
-                safe(addr.getZipCode()));
-    }
-
-    private String safe(String value) {
-        return value != null ? value : "";
-    }
+    private String safe(String v) { return v == null ? "" : v; }
 }

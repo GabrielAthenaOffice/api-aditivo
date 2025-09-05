@@ -11,11 +11,11 @@ public class ContractAddendumRequest {
 
     @NotBlank
     private String nome;
-    @NotBlank
+
     private String cpf;
-    @NotBlank
+
     private String cnpj;
-    @NotBlank
+
     private String email;
 
     private String endereco;

@@ -6,10 +6,7 @@ import com.formulario.athena.service.ContractAddendumService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/addendums")
@@ -19,11 +16,10 @@ public class ContractAddendumController {
     private ContractAddendumService contractService;
 
     /**
-     * Cria um novo aditivo contratual.
-     * Fluxo:
-     * 1. Salva no Mongo
-     * 2. Cria documento via ZapSign
-     * 3. Atualiza Mongo com ID, link e status
+     * Cria um novo aditivo contratual:
+     * - Salva no Mongo
+     * - Cria documento na ZapSign
+     * - Atualiza status
      */
     @PostMapping
     public ResponseEntity<ContractAddendumResponse> criar(@Valid @RequestBody ContractAddendumRequest request) {
@@ -31,4 +27,15 @@ public class ContractAddendumController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * (Opcional) Endpoint para buscar por ID
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<ContractAddendumResponse> buscarPorId(@PathVariable String id) {
+        // Se quiser, podemos montar um mapper que converte a entidade para Response.
+        // Aqui só um esqueleto:
+        return contractService.buscarPorId(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 }

@@ -1,76 +1,69 @@
 package com.formulario.athena.service;
 
 import com.formulario.athena.config.ConexaClientService;
-import com.formulario.athena.config.ZapSignConfig;
 import com.formulario.athena.dto.AditivoContratualDTO;
-import com.formulario.athena.model.AditivoContratual;
+import com.formulario.athena.dto.ZapSignCreateDocResponse;
 import com.formulario.athena.model.ClientData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class ZapSignService {
 
     @Autowired
-    private WebClient zapSignWebClient;
+    private WebClient zapSignClient;
 
     @Autowired
     private ConexaClientService conexaClientService;
 
-    @Value("${zapsign.api.token.model")
-    private String templateId;
+    @Value("${zapsign.api.template-id}")
+    private String templateId; // ID ou link do template
 
-    public ZapSignService(WebClient.Builder builder,
-                          @Value("${zapsign.api.url}") String zapSignUrl,
-                          @Value("${zapsign.api.token}") String token,
-                          ConexaClientService conexaClientService) {
+    public ZapSignCreateDocResponse criarDocumentoViaModelo(AditivoContratualDTO dto) {
 
-        this.zapSignWebClient = builder
-                .baseUrl(zapSignUrl)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Token " + token)
-                .build();
-        this.conexaClientService = conexaClientService;
+        ClientData clientData = conexaClientService.buscarClientePorNome(dto.getContratante());
+
+        // Usando lista mutável para evitar NPE do Map.of
+        List<Map<String, String>> data = new ArrayList<>();
+
+        addIfNotNull(data, "{{CONTRATANTE}}", clientData.getNome());
+        addIfNotNull(data, "{{CPF}}", clientData.getCpf());
+        addIfNotNull(data, "{{ENDEREÇO COMPLETO}}", dto.getEndereco());
+        addIfNotNull(data, "{{DATA DE INÍCIO DO CONTRATO}}", dto.getDataInicioContrato());
+        addIfNotNull(data, "{{CONTRATANTE PESSOA JURÍDICA}}", dto.getContratantePessoaJuridica());
+        addIfNotNull(data, "{{CNPJ}}", clientData.getCnpj());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("template_id", templateId);
+        body.put("data", data);
+        body.put("signer_name", Optional.ofNullable(clientData.getNome()).orElse("Sem Nome"));
+        body.put("signer_email", Optional.ofNullable(clientData.getEmail()).orElse("no-reply@athena.com"));
+        body.put("signer_phone_country", "55");
+        body.put("signer_phone_number", clientData.getTelefone());
+        body.put("lang", "pt-br");
+        body.put("send_automatic_email", true);
+
+        return zapSignClient.post()
+                .uri("/models/create-doc/") // <- endpoint correto
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(ZapSignCreateDocResponse.class)
+                .block();
     }
 
-    public Mono<String> criarDocumentoViaModelo(AditivoContratualDTO contratualDTO) {
-        // Buscar dados do cliente no Conexa
-        ClientData clientData = conexaClientService.buscarClientePorNome(contratualDTO.getContratante());
-
-        if (clientData == null) {
-            return Mono.error(new IllegalArgumentException("Cliente não encontrado no Conexa: " + contratualDTO.getContratante()));
+    /**
+     * Adiciona um par de substituição no array de placeholders,
+     * ignorando valores nulos para evitar NullPointerException.
+     */
+    private void addIfNotNull(List<Map<String, String>> data, String de, String para) {
+        if (para != null) {
+            data.add(Map.of("de", de, "para", para));
+        } else {
+            System.out.println("[ZapSignService] Placeholder ignorado: " + de + " (valor nulo)");
         }
-
-        Map<String, Object> requestBody = Map.of(
-                "template_id", templateId,
-                "signers", List.of(
-                        Map.of(
-                                "name", clientData.getNome(),
-                                "email", clientData.getEmail(),
-                                "phone_number", clientData.getTelefone()
-                        )
-                ),
-                "variables", Map.of(
-                        "CONTRATANTE", clientData.getNome(),
-                        "CPF", clientData.getCpf(),
-                        "ENDEREÇO COMPLETO", clientData.getEndereco(),
-                        "DATA DE INÍCIO DO CONTRATO", contratualDTO.getDataInicioContrato(),
-                        "CONTRATANTE PESSOA JURÍDICA", contratualDTO.getContratantePessoaJuridica(),
-                        "CNPJ", clientData.getCnpj()
-                )
-        );
-
-        return zapSignWebClient.post()
-                .uri("/docs")
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(String.class);
     }
 }

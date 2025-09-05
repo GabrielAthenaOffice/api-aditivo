@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class ContractAddendumService {
@@ -33,22 +34,28 @@ public class ContractAddendumService {
 
     /**
      * Cria um aditivo contratual:
-     * 1. Salva no Mongo
-     * 2. Cria documento via modelo na ZapSign
-     * 3. Atualiza Mongo com zapsignDocumentId, link e status
+     * 1. Busca dados do cliente no Conexa
+     * 2. Salva no Mongo
+     * 3. Cria documento via modelo na ZapSign
+     * 4. Atualiza Mongo com zapsignDocumentId, link e status
      */
     public ContractAddendumResponse criarAddendum(ContractAddendumRequest request) {
 
-        // Gera placeholders para o documento
+        // 🔹 Buscar dados do cliente no Conexa
+        ClientData clientData = conexaClient.buscarClientePorNome(request.getNome());
+
+        // 🔹 Gera placeholders para o documento (se ainda precisar deles)
         Map<String, String> placeholders = placeholderMapper.gerarPlaceholders(request);
 
-        // Monta o objeto inicial para salvar no Mongo
+        // 🔹 Monta o objeto inicial para salvar no Mongo
         ContractAddendum addendum = ContractAddendum.builder()
                 .cliente(ClientData.builder()
                         .nome(request.getNome())
                         .cpf(request.getCpf())
                         .cnpj(request.getCnpj())
                         .email(request.getEmail())
+                        .telefone(clientData.getTelefone())
+                        .endereco(clientData.getEndereco())
                         .build())
                 .contratoSocialPath(null) // futuramente arquivo PDF
                 .zapsignDocumentId(null)
@@ -58,31 +65,32 @@ public class ContractAddendumService {
                 .atualizadoEm(LocalDateTime.now())
                 .build();
 
-        // Salva inicial no Mongo
         ContractAddendum saved = repository.save(addendum);
 
-        // Monta DTO para enviar à ZapSign
+        // 🔹 Monta DTO para enviar à ZapSign
         AditivoContratualDTO dto = new AditivoContratualDTO();
         dto.setContratante(placeholders.get("CONTRATANTE"));
         dto.setEndereco(placeholders.get("ENDERECO"));
         dto.setDataInicioContrato(placeholders.get("DATA_INICIO"));
         dto.setContratantePessoaJuridica(placeholders.get("CONTRATANTE_PJ"));
 
-        // Cria documento via ZapSign
-        String zapsignResponse = zapSignService.criarDocumentoViaModelo(dto).block();
+        // 🔹 Cria documento via ZapSign
+        var zapResponse = zapSignService.criarDocumentoViaModelo(dto);
 
-        // Extrai dados da resposta (ID e link do documento)
-        String documentId = extrairCampo(zapsignResponse, "id");
-        String link = extrairCampo(zapsignResponse, "url");
+        // 🔹 Extrai dados da resposta
+        String documentId = zapResponse.getToken(); // ID do documento
+        String link = zapResponse.getSigners() != null && !zapResponse.getSigners().isEmpty()
+                ? zapResponse.getSigners().getFirst().getSign_url()
+                : null;
 
-        // Atualiza Mongo com informações da ZapSign
+        // 🔹 Atualiza Mongo com informações da ZapSign
         saved.setZapsignDocumentId(documentId);
         saved.setZapsignLink(link);
         saved.setStatus("aguardando_assinatura");
         saved.setAtualizadoEm(LocalDateTime.now());
         repository.save(saved);
 
-        // Retorna resposta completa
+        // 🔹 Retorna resposta completa
         return ContractAddendumResponse.builder()
                 .id(saved.getId())
                 .zapsignDocumentId(saved.getZapsignDocumentId())
@@ -92,25 +100,38 @@ public class ContractAddendumService {
                 .cpf(saved.getCliente().getCpf())
                 .cnpj(saved.getCliente().getCnpj())
                 .email(saved.getCliente().getEmail())
-                .endereco(placeholders.get("ENDERECO"))
-                .dataInicioContrato(placeholders.get("DATA_INICIO"))
-                .contratantePessoaJuridica(placeholders.get("CONTRATANTE_PJ"))
+                .endereco(saved.getCliente().getEndereco())
+                .dataInicioContrato(dto.getDataInicioContrato())
+                .contratantePessoaJuridica(dto.getContratantePessoaJuridica())
                 .criadoEm(saved.getCriadoEm())
                 .atualizadoEm(saved.getAtualizadoEm())
                 .build();
     }
 
     /**
-     * Extrai campos simples de uma resposta JSON da ZapSign
+     * Busca um aditivo por ID e retorna o DTO de resposta (opcional).
      */
-    private String extrairCampo(String json, String campo) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode node = mapper.readTree(json);
-            return node.has(campo) ? node.get(campo).asText() : null;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+    public Optional<ContractAddendumResponse> buscarPorId(String id) {
+        return repository.findById(id).map(saved -> {
+            ClientData cliente = saved.getCliente();
+
+            return ContractAddendumResponse.builder()
+                    .id(saved.getId())
+                    .zapsignDocumentId(saved.getZapsignDocumentId())
+                    .zapsignLink(saved.getZapsignLink())
+                    .status(saved.getStatus())
+                    .nome(cliente != null ? cliente.getNome() : null)
+                    .cpf(cliente != null ? cliente.getCpf() : null)
+                    .cnpj(cliente != null ? cliente.getCnpj() : null)
+                    .email(cliente != null ? cliente.getEmail() : null)
+                    .endereco(cliente != null ? cliente.getEndereco() : null)
+                    // Note: dataInicioContrato / contratantePessoaJuridica só aparecem se
+                    // você as salvou na entidade. Se não, retornamos null aqui.
+                    .dataInicioContrato(saved.getDataInicioContrato()) // pode ser null
+                    .contratantePessoaJuridica(saved.getContratantePessoaJuridica()) // pode ser null
+                    .criadoEm(saved.getCriadoEm())
+                    .atualizadoEm(saved.getAtualizadoEm())
+                    .build();
+        });
     }
 }
