@@ -42,7 +42,7 @@ public class ContractAddendumService {
     public ContractAddendumResponse criarAddendum(ContractAddendumRequest request) {
 
         // 🔹 Buscar dados do cliente no Conexa
-        ClientData clientData = conexaClient.buscarClientePorNome(request.getNome());
+        Optional<ClientData> clientData = conexaClient.buscarClientePorNome(request.getNome());
 
         // 🔹 Gera placeholders para o documento (se ainda precisar deles)
         Map<String, String> placeholders = placeholderMapper.gerarPlaceholders(request);
@@ -54,8 +54,8 @@ public class ContractAddendumService {
                         .cpf(request.getCpf())
                         .cnpj(request.getCnpj())
                         .email(request.getEmail())
-                        .telefone(clientData.getTelefone())
-                        .endereco(clientData.getEndereco())
+                        .telefone(clientData.get().getTelefone())
+                        .endereco(clientData.get().getEndereco())
                         .build())
                 .contratoSocialPath(null) // futuramente arquivo PDF
                 .zapsignDocumentId(null)

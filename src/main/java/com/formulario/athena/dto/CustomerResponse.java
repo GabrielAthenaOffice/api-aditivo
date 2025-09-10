@@ -13,6 +13,7 @@ public class CustomerResponse {
     private Long customerId;
     private String name;
     private String firstName;
+    private String cpf;
     private Boolean isActive;
     private List<String> emailsMessage;
     private List<String> phones;
