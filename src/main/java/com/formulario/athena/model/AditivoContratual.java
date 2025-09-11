@@ -38,12 +38,6 @@ public class AditivoContratual {
     private String pessoaJuridicaCnpj;
     private String pessoaJuridicaEndereco;
 
-    private LocalDateTime dataCriacao;
-    private String status; // PENDENTE, ENVIADO, ASSINADO
-    private String documentoPath; // local storage path ou url
-
-
-    public void prePersist() {
-        if (dataCriacao == null) dataCriacao = LocalDateTime.now();
-    }
+    private String localData;
+    private LocalDateTime criadoEm = LocalDateTime.now();
 }

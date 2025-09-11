@@ -3,7 +3,9 @@ package com.formulario.athena.service;
 import com.formulario.athena.dto.AditivoRequestDTO;
 import com.formulario.athena.dto.AditivoResponseDTO;
 import com.formulario.athena.model.AditivoContratual;
+import com.formulario.athena.model.AditivoHistorico;
 import com.formulario.athena.repository.AditivoRepository;
+import com.formulario.athena.repository.HistoricoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,35 +18,41 @@ public class AditivoServiceImpl implements AditivoService {
     @Autowired
     private AditivoRepository aditivoRepository;
 
+    @Autowired
+    private HistoricoRepository historicoRepository;
+
     @Override
     @Transactional
-    public AditivoResponseDTO createAditivo(AditivoRequestDTO request) {
-        AditivoContratual aditivo = AditivoContratual.builder()
-                .empresaId(request.getEmpresaId())
-                .unidadeNome(request.getUnidadeNome())
-                .unidadeCnpj(request.getUnidadeCnpj())
-                .unidadeEndereco(request.getUnidadeEndereco())
-                .pessoaFisicaNome(request.getPessoaFisicaNome())
-                .pessoaFisicaCpf(request.getPessoaFisicaCpf())
-                .pessoaFisicaEndereco(request.getPessoaFisicaEndereco())
-                .dataInicioContrato(request.getDataInicioContrato())
-                .pessoaJuridicaNome(request.getPessoaJuridicaNome())
-                .pessoaJuridicaCnpj(request.getPessoaJuridicaCnpj())
-                .pessoaJuridicaEndereco(request.getPessoaJuridicaEndereco())
-                .status("PENDENTE")
-                .dataCriacao(LocalDateTime.now())
-                .build();
+    public AditivoResponseDTO createAditivo(AditivoRequestDTO dto) {
+        // Converte DTO em entidade
+        AditivoContratual aditivo = new AditivoContratual();
+        aditivo.setEmpresaId(Long.valueOf(dto.getEmpresaId()));
+        aditivo.setUnidadeNome(dto.getUnidadeNome());
+        aditivo.setUnidadeCnpj(dto.getUnidadeCnpj());
+        aditivo.setUnidadeEndereco(dto.getUnidadeEndereco());
+        aditivo.setPessoaFisicaNome(dto.getPessoaFisicaNome());
+        aditivo.setPessoaFisicaCpf(dto.getPessoaFisicaCpf());
+        aditivo.setPessoaFisicaEndereco(dto.getPessoaFisicaEndereco());
+        aditivo.setDataInicioContrato(dto.getDataInicioContrato());
+        aditivo.setPessoaJuridicaNome(dto.getPessoaJuridicaNome());
+        aditivo.setPessoaJuridicaCnpj(dto.getPessoaJuridicaCnpj());
+        aditivo.setPessoaJuridicaEndereco(dto.getPessoaJuridicaEndereco());
+        aditivo.setLocalData(dto.getLocalData());
 
+        AditivoContratual salvo = aditivoRepository.save(aditivo);
 
-        AditivoContratual saved = aditivoRepository.save(aditivo);
+        // Salva histórico
+        AditivoHistorico historico = new AditivoHistorico();
+        historico.setEmpresaId(String.valueOf(salvo.getEmpresaId()));
+        historico.setEmpresaNome(salvo.getPessoaJuridicaNome());
+        historico.setAditivoId(salvo.getId());
+        historico.setStatus("RECEBIDO");
+        historico.setMensagem("Aditivo registrado com sucesso");
 
+        historicoRepository.save(historico);
 
-        return AditivoResponseDTO.builder()
-                .id(saved.getId())
-                .empresaId(saved.getEmpresaId())
-                .status(saved.getStatus())
-                .dataCriacao(saved.getDataCriacao())
-                .documentoPath(saved.getDocumentoPath())
-                .build();
+        // Retorno padronizado
+        return new AditivoResponseDTO("SUCESSO",
+                "Aditivo registrado com sucesso", salvo.getId());
     }
 }
