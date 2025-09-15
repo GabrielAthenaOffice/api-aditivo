@@ -1,5 +1,6 @@
 package com.formulario.athena.repository;
 
+import com.formulario.athena.dto.HistoricoResponseDTO;
 import com.formulario.athena.model.AditivoHistorico;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;

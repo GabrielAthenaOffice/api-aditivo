@@ -18,8 +18,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class AditivoServiceImpl implements AditivoService {
@@ -34,19 +34,8 @@ public class AditivoServiceImpl implements AditivoService {
     @Transactional
     public AditivoResponseDTO createAditivo(AditivoRequestDTO dto) {
         // Converte DTO em entidade
-        AditivoContratual aditivo = new AditivoContratual();
-        aditivo.setEmpresaId(Long.valueOf(dto.getEmpresaId()));
-        aditivo.setUnidadeNome(dto.getUnidadeNome());
-        aditivo.setUnidadeCnpj(dto.getUnidadeCnpj());
-        aditivo.setUnidadeEndereco(dto.getUnidadeEndereco());
-        aditivo.setPessoaFisicaNome(dto.getPessoaFisicaNome());
-        aditivo.setPessoaFisicaCpf(dto.getPessoaFisicaCpf());
-        aditivo.setPessoaFisicaEndereco(dto.getPessoaFisicaEndereco());
-        aditivo.setDataInicioContrato(dto.getDataInicioContrato());
-        aditivo.setPessoaJuridicaNome(dto.getPessoaJuridicaNome());
-        aditivo.setPessoaJuridicaCnpj(dto.getPessoaJuridicaCnpj());
-        aditivo.setPessoaJuridicaEndereco(dto.getPessoaJuridicaEndereco());
-        aditivo.setLocalData(dto.getLocalData());
+        AditivoContratual aditivo = AditivoMapper.toEntity(dto);
+        aditivo.setStatus("ADITIVO CRIADO / AGUARDANDO RESPOSTA");
 
         AditivoContratual salvo = aditivoRepository.save(aditivo);
 
@@ -66,7 +55,7 @@ public class AditivoServiceImpl implements AditivoService {
     }
 
     @Override
-    public AditivoSimpleResponseDTO listarTodosAditivos(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
+    public AditivoResponseList listarTodosAditivos(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
         Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc")
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
@@ -81,13 +70,34 @@ public class AditivoServiceImpl implements AditivoService {
         }
 
         List<AditivoSimpleResponseDTO> aditivoResponseLists = aditivos.stream()
-                .map(aditivoContratual -> AditivoMapper.toSimpleResponse(aditivoContratual))
-        return null;
+                .map(AditivoMapper::toSimpleResponse)
+                .toList();
+
+        AditivoResponseList aditivoResponseList = new AditivoResponseList();
+        aditivoResponseList.setContent(aditivoResponseLists);
+        aditivoResponseList.setPageNumber(aditivoPage.getNumber());
+        aditivoResponseList.setPageSize(aditivoPage.getSize());
+        aditivoResponseList.setTotalElements(aditivoPage.getTotalElements());
+        aditivoResponseList.setTotalPages(aditivoPage.getTotalPages());
+        aditivoResponseList.setLastPage(aditivoPage.isLast());
+
+        return aditivoResponseList;
     }
 
     @Override
-    public AditivoSimpleResponseDTO listarPorNomeEmpresa(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder, String nomeEmpresa) {
-        return null;
+    public List<AditivoSimpleResponseDTO> listarPorNomeEmpresa(String nomeEmpresa) {
+        List<AditivoContratual> aditivoOpt = aditivoRepository.findByPessoaJuridicaNomeIgnoreCase(nomeEmpresa);
+
+        if (aditivoOpt.isEmpty()) {
+            throw new APIExceptions("Aditivo não encontrado para a empresa: " + nomeEmpresa);
+        }
+
+
+        List<AditivoSimpleResponseDTO> aditivoSimpleResponseDTO = aditivoOpt.stream()
+                .map(AditivoMapper::toSimpleResponse)
+                .toList();
+
+        return aditivoSimpleResponseDTO;
     }
 
 

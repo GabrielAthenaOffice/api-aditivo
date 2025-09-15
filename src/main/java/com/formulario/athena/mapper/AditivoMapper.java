@@ -14,9 +14,8 @@ public class AditivoMapper {
     public static AditivoSimpleResponseDTO toSimpleResponse(AditivoContratual aditivo) {
         return new AditivoSimpleResponseDTO(
                 aditivo.getEmpresaId(),
-                aditivo.getPessoaFisicaNome(),
-                aditivo.se,
-                mensagem,
+                aditivo.getPessoaJuridicaNome(),
+                aditivo.getStatus(),
                 aditivo.getId()
         );
     }

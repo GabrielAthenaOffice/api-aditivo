@@ -11,6 +11,5 @@ public class AditivoSimpleResponseDTO {
     private Long empresaId;
     private String nomeEmpresa;
     private String status;
-    private String mensagem;
     private String aditivoId;
 }

@@ -38,6 +38,7 @@ public class AditivoContratual {
     private String pessoaJuridicaCnpj;
     private String pessoaJuridicaEndereco;
 
+    private String status;
     private String localData;
     private LocalDateTime criadoEm = LocalDateTime.now();
 }
