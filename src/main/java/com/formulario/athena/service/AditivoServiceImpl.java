@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class AditivoServiceImpl implements AditivoService {
@@ -100,5 +99,17 @@ public class AditivoServiceImpl implements AditivoService {
         return aditivoSimpleResponseDTO;
     }
 
+    @Override
+    public AditivoSimpleResponseDTO deleteAditivo(Long aditivoId) {
+        AditivoContratual aditivoContratual = aditivoRepository.findById(aditivoId);
+
+        if(aditivoContratual == null) {
+            throw new APIExceptions("Não existe um aditivo com esse ID");
+        }
+
+        aditivoRepository.delete(aditivoContratual);
+
+        return AditivoMapper.toSimpleResponse(aditivoContratual);
+    }
 
 }

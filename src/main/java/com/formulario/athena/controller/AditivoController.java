@@ -1,10 +1,7 @@
 package com.formulario.athena.controller;
 
 import com.formulario.athena.config.AppConstantes;
-import com.formulario.athena.dto.AditivoRequestDTO;
-import com.formulario.athena.dto.AditivoResponseDTO;
-import com.formulario.athena.dto.AditivoSimpleResponseDTO;
-import com.formulario.athena.dto.HistoricoResponseDTO;
+import com.formulario.athena.dto.*;
 import com.formulario.athena.mapper.AditivoResponseHistoricoDTO;
 import com.formulario.athena.service.AditivoService;
 import com.formulario.athena.service.HistoricoService;
@@ -39,6 +36,16 @@ public class AditivoController {
         return new ResponseEntity<>(aditivoSimpleResponseDTO, HttpStatus.OK);
     }
 
+    @GetMapping("/empresa/todas-as-empresas")
+    public ResponseEntity<AditivoResponseList> listarTodasAsEmpresas(@RequestParam(name = "pageNumber", defaultValue = AppConstantes.PAGE_NUMBER, required = false) Integer pageNumber,
+                                                                     @RequestParam(name = "pageSize", defaultValue = AppConstantes.PAGE_SIZE, required = false) Integer pageSize,
+                                                                     @RequestParam(name = "sortBy", defaultValue = AppConstantes.SORT_ADITIVOS_BY) String sortBy,
+                                                                     @RequestParam(name = "sortOrder", defaultValue = AppConstantes.SORT_DIR, required = false) String sortOrder){
+        AditivoResponseList aditivoResponseList = aditivoService.listarTodosAditivos(pageNumber, pageSize, sortBy, sortOrder);
+
+        return new ResponseEntity<>(aditivoResponseList, HttpStatus.OK);
+    }
+
     @GetMapping("/historico")
     public ResponseEntity<AditivoResponseHistoricoDTO> listarTodoOHistorico(@RequestParam(name = "pageNumber", defaultValue = AppConstantes.PAGE_NUMBER, required = false) Integer pageNumber,
                                                                             @RequestParam(name = "pageSize", defaultValue = AppConstantes.PAGE_SIZE, required = false) Integer pageSize,
@@ -54,6 +61,13 @@ public class AditivoController {
         List<HistoricoResponseDTO> historicoResponseDTOS = historicoService.listarHistoricoPorNome(nome);
 
         return new ResponseEntity<>(historicoResponseDTOS, HttpStatus.FOUND);
+    }
+
+    @DeleteMapping("empresa/deletar-aditivo/{id}")
+    public ResponseEntity<AditivoSimpleResponseDTO> deletarAditivo(Long id) {
+        AditivoSimpleResponseDTO aditivoSimpleResponseDTO = aditivoService.deleteAditivo(id);
+
+        return new ResponseEntity<>(aditivoSimpleResponseDTO, HttpStatus.OK);
     }
 
 }

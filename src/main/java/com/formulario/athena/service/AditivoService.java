@@ -11,4 +11,5 @@ public interface AditivoService {
     AditivoResponseDTO createAditivo(AditivoRequestDTO request);
     AditivoResponseList listarTodosAditivos(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder);
     List<AditivoSimpleResponseDTO> listarPorNomeEmpresa(String nome);
+    AditivoSimpleResponseDTO deleteAditivo(Long aditivoId);
 }
