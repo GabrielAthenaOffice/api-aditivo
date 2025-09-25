@@ -10,6 +10,6 @@ import java.util.Optional;
 @Repository
 public interface AditivoRepository extends MongoRepository<AditivoContratual, String> {
     List<AditivoContratual> findByEmpresaId(String empresaId);
-    AditivoContratual findById(Long id);
+    Optional<AditivoContratual> findById(String id);
     List<AditivoContratual> findByPessoaJuridicaNomeIgnoreCase(String pessoaJuridicaNome);
 }

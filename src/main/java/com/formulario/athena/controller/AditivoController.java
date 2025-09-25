@@ -25,6 +25,8 @@ public class AditivoController {
 
     @PostMapping
     public ResponseEntity<AditivoResponseDTO> criar(@Valid @RequestBody AditivoRequestDTO dto) {
+        System.out.println(">>> Recebido DTO: " + dto);
+
         AditivoResponseDTO resposta = aditivoService.createAditivo(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(resposta);
     }

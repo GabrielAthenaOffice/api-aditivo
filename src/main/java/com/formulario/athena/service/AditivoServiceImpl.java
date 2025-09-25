@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class AditivoServiceImpl implements AditivoService {
@@ -30,11 +31,12 @@ public class AditivoServiceImpl implements AditivoService {
     private HistoricoRepository historicoRepository;
 
     @Override
-    @Transactional
     public AditivoResponseDTO createAditivo(AditivoRequestDTO dto) {
         // Converte DTO em entidade
         AditivoContratual aditivo = AditivoMapper.toEntity(dto);
         aditivo.setStatus("ADITIVO CRIADO / AGUARDANDO RESPOSTA");
+
+        System.out.println(">>> Salvando aditivo: " + aditivo);
 
         AditivoContratual salvo = aditivoRepository.save(aditivo);
 
@@ -101,7 +103,9 @@ public class AditivoServiceImpl implements AditivoService {
 
     @Override
     public AditivoSimpleResponseDTO deleteAditivo(Long aditivoId) {
-        AditivoContratual aditivoContratual = aditivoRepository.findById(aditivoId);
+        Optional<AditivoContratual> aditivoContratual1 = aditivoRepository.findById(String.valueOf(aditivoId));
+
+        AditivoContratual aditivoContratual = aditivoContratual1.get();
 
         if(aditivoContratual == null) {
             throw new APIExceptions("Não existe um aditivo com esse ID");
