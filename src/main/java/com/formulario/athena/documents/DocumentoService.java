@@ -1,5 +1,7 @@
 package com.formulario.athena.documents;
 
+import com.deepoove.poi.XWPFTemplate;
+import com.deepoove.poi.config.Configure;
 import com.formulario.athena.model.AditivoContratual;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.usermodel.*;
@@ -10,8 +12,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,18 +27,24 @@ public class DocumentoService {
 
     public String gerarAditivoContratual(AditivoContratual aditivo) {
         try {
-            // Carrega o modelo
             ClassPathResource modeloResource = new ClassPathResource(MODELO_PATH);
-            XWPFDocument documento = new XWPFDocument(modeloResource.getInputStream());
 
-            // Mapa de placeholders e valores
-            Map<String, String> placeholders = criarMapaPlaceholders(aditivo);
-            log.info("Placeholders a substituir: {}", placeholders);
+            if (!modeloResource.exists()) {
+                throw new FileNotFoundException("Template não encontrado: " + MODELO_PATH);
+            }
 
-            // Substitui placeholders no documento
-            substituirPlaceholders(documento, placeholders);
+            // Dados para o template SIMPLIFICADO
+            Map<String, Object> data = criarMapaDadosSimplificado(aditivo);
+            log.info("Gerando documento com dados: {}", data.keySet());
 
-            // Salva o novo documento
+            // POI-TL com configuração básica
+            Configure config = Configure.builder().build();
+
+            // Compila e renderiza
+            XWPFTemplate template = XWPFTemplate.compile(modeloResource.getInputStream(), config)
+                    .render(data);
+
+            // Salva o documento
             String nomeArquivo = gerarNomeArquivo(aditivo);
             String caminhoCompleto = DESTINO_PATH + nomeArquivo;
 
@@ -45,165 +53,58 @@ public class DocumentoService {
                 destinoDir.mkdirs();
             }
 
-            try (FileOutputStream out = new FileOutputStream(caminhoCompleto)) {
-                documento.write(out);
-            }
+            template.writeAndClose(new FileOutputStream(caminhoCompleto));
 
-            documento.close();
-
-            log.info("Documento gerado com sucesso: {}", caminhoCompleto);
+            log.info("✅ Documento gerado com SUCESSO: {}", caminhoCompleto);
             return caminhoCompleto;
 
         } catch (Exception e) {
+            log.error("❌ Erro ao gerar documento: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao gerar documento: " + e.getMessage(), e);
         }
     }
 
-    private Map<String, String> criarMapaPlaceholders(AditivoContratual aditivo) {
-        Map<String, String> placeholders = new HashMap<>();
+    private Map<String, Object> criarMapaDadosSimplificado(AditivoContratual aditivo) {
+        Map<String, Object> data = new HashMap<>();
 
-        // Dados da Unidade
-        placeholders.put("{{ATHENA OFFICE LTDA}}", aditivo.getUnidadeNome() != null ? aditivo.getUnidadeNome() : "");
-        placeholders.put("{{CNPJ UNIDADE}}", aditivo.getUnidadeCnpj() != null ? aditivo.getUnidadeCnpj() : "");
-        placeholders.put("{{CIDADE ESTADO RUA Nº BAIRRO DA UNIDADE}}", aditivo.getUnidadeEndereco() != null ? aditivo.getUnidadeEndereco() : "");
+        // Unidade Athena
+        data.put("unidadeNome", valorOuVazio(aditivo.getUnidadeNome()));
+        data.put("unidadeCnpj", valorOuVazio(aditivo.getUnidadeCnpj()));
+        data.put("unidadeEndereco", valorOuVazio(aditivo.getUnidadeEndereco()));
 
-        // Dados da Pessoa Física
-        placeholders.put("{{PESSOA FÍSICA}}", aditivo.getPessoaFisicaNome() != null ? aditivo.getPessoaFisicaNome() : "");
-        placeholders.put("{{CPF PESSOA FÍSICA}}", aditivo.getPessoaFisicaCpf() != null ? aditivo.getPessoaFisicaCpf() : "");
-        placeholders.put("{{ENDEREÇO COMPLETO PF}}", aditivo.getPessoaFisicaEndereco() != null ? aditivo.getPessoaFisicaEndereco() : "");
+        // Pessoa Física
+        data.put("pessoaFisicaNome", valorOuVazio(aditivo.getPessoaFisicaNome()));
+        data.put("pessoaFisicaCpf", valorOuVazio(aditivo.getPessoaFisicaCpf()));
+        data.put("pessoaFisicaEndereco", valorOuVazio(aditivo.getPessoaFisicaEndereco()));
 
-        // Dados da Pessoa Jurídica
-        placeholders.put("{{PESSOA JURÍDICA}}", aditivo.getPessoaJuridicaNome() != null ? aditivo.getPessoaJuridicaNome() : "");
-        placeholders.put("{{CNPJ CONTRATANTE}}", aditivo.getPessoaJuridicaCnpj() != null ? aditivo.getPessoaJuridicaCnpj() : "");
+        // Pessoa Jurídica
+        data.put("pessoaJuridicaNome", valorOuVazio(aditivo.getPessoaJuridicaNome()));
+        data.put("pessoaJuridicaCnpj", valorOuVazio(aditivo.getPessoaJuridicaCnpj()));
+        data.put("pessoaJuridicaEndereco", valorOuVazio(aditivo.getPessoaJuridicaEndereco()));
 
         // Datas
-        placeholders.put("{{DATA DE INÍCIO DO CONTRATO}}", formatarData(aditivo.getDataInicioContrato()));
-        placeholders.put("{{LOCAL E DATA}}", LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        data.put("dataInicioContrato", formatarData(aditivo.getDataInicioContrato()));
+        data.put("localData", valorOuVazio(aditivo.getLocalData()));
+        data.put("dataAtual", LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
 
-        return placeholders;
+        return data;
     }
 
-    private void substituirPlaceholders(XWPFDocument documento, Map<String, String> placeholders) {
-        // Substitui em parágrafos
-        for (XWPFParagraph paragraph : documento.getParagraphs()) {
-            substituirPlaceholdersNoParagrafo(paragraph, placeholders);
-        }
-
-        // Substitui em tabelas
-        for (XWPFTable table : documento.getTables()) {
-            for (XWPFTableRow row : table.getRows()) {
-                for (XWPFTableCell cell : row.getTableCells()) {
-                    for (XWPFParagraph paragraph : cell.getParagraphs()) {
-                        substituirPlaceholdersNoParagrafo(paragraph, placeholders);
-                    }
-                }
-            }
-        }
-
-        // Substitui em headers e footers
-        substituirPlaceholdersHeadersFooters(documento, placeholders);
-    }
-
-    private void substituirPlaceholdersNoParagrafo(XWPFParagraph paragraph, Map<String, String> placeholders) {
-        String textoOriginal = paragraph.getText();
-        if (textoOriginal == null || textoOriginal.isEmpty()) {
-            return;
-        }
-
-        String textoSubstituido = textoOriginal;
-
-        // Substitui TODOS os placeholders no texto
-        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            if (textoSubstituido.contains(entry.getKey())) {
-                textoSubstituido = textoSubstituido.replace(entry.getKey(), entry.getValue());
-            }
-        }
-
-        // Se houve alteração, aplica a substituição
-        if (!textoSubstituido.equals(textoOriginal)) {
-            // Remove todos os runs existentes
-            for (int i = paragraph.getRuns().size() - 1; i >= 0; i--) {
-                paragraph.removeRun(i);
-            }
-
-            // Cria um novo run com o texto substituído
-            XWPFRun newRun = paragraph.createRun();
-            newRun.setText(textoSubstituido);
-
-            // Mantém a formatação básica (opcional)
-            if (!paragraph.getRuns().isEmpty()) {
-                XWPFRun originalRun = paragraph.getRuns().get(0);
-                newRun.setFontFamily(originalRun.getFontFamily());
-                newRun.setFontSize(originalRun.getFontSize());
-                newRun.setBold(originalRun.isBold());
-                newRun.setItalic(originalRun.isItalic());
-            }
-        }
-    }
-
-    private void substituirPlaceholdersHeadersFooters(XWPFDocument documento, Map<String, String> placeholders) {
-        // Headers
-        for (XWPFHeader header : documento.getHeaderList()) {
-            for (XWPFParagraph paragraph : header.getParagraphs()) {
-                substituirPlaceholdersNoParagrafo(paragraph, placeholders);
-            }
-        }
-
-        // Footers
-        for (XWPFFooter footer : documento.getFooterList()) {
-            for (XWPFParagraph paragraph : footer.getParagraphs()) {
-                substituirPlaceholdersNoParagrafo(paragraph, placeholders);
-            }
-        }
-    }
-
-    // Método ALTERNATIVO mais robusto para substituição
-    private void substituirPlaceholdersRobusto(XWPFDocument documento, Map<String, String> placeholders) {
-        try {
-            // Converte para texto, substitui e reconstrói
-            String textoCompleto = extrairTexto(documento);
-
-            for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                textoCompleto = textoCompleto.replace(entry.getKey(), entry.getValue());
-            }
-
-            // Limpa e reconstrói o documento (mais radical, mas funciona)
-            reconstruirDocumento(documento, textoCompleto);
-
-        } catch (Exception e) {
-            log.warn("Método robusto falhou, usando método padrão");
-        }
-    }
-
-    private String extrairTexto(XWPFDocument documento) {
-        StringBuilder texto = new StringBuilder();
-
-        for (XWPFParagraph paragraph : documento.getParagraphs()) {
-            texto.append(paragraph.getText()).append("\n");
-        }
-
-        return texto.toString();
-    }
-
-    private void reconstruirDocumento(XWPFDocument documento, String textoCompleto) {
-        // Remove todos os parágrafos existentes
-        List<XWPFParagraph> paragraphs = new ArrayList<>(documento.getParagraphs());
-        for (XWPFParagraph paragraph : paragraphs) {
-            documento.removeBodyElement(documento.getPosOfParagraph(paragraph));
-        }
-
-        // Adiciona novo parágrafo com todo o texto
-        XWPFParagraph newParagraph = documento.createParagraph();
-        XWPFRun run = newParagraph.createRun();
-        run.setText(textoCompleto);
+    private String valorOuVazio(String valor) {
+        return valor != null ? valor : "";
     }
 
     private String gerarNomeArquivo(AditivoContratual aditivo) {
-        String nomeSanitizado = aditivo.getPessoaJuridicaNome()
-                .replaceAll("[^a-zA-Z0-9]", "_")
-                .toLowerCase();
+        String nomeSanitizado = "aditivo";
+        if (aditivo.getPessoaJuridicaNome() != null) {
+            nomeSanitizado = aditivo.getPessoaJuridicaNome()
+                    .replaceAll("[^a-zA-Z0-9\\s]", "")
+                    .replaceAll("\\s+", "_")
+                    .toLowerCase();
+        }
 
-        return String.format("aditivo_%s_%s.docx", nomeSanitizado, aditivo.getId());
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        return String.format("aditivo_%s_%s.docx", nomeSanitizado, timestamp);
     }
 
     private String formatarData(LocalDate data) {

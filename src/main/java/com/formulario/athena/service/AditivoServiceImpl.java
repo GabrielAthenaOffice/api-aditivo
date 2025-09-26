@@ -2,7 +2,6 @@ package com.formulario.athena.service;
 
 import com.formulario.athena.config.exceptions.APIExceptions;
 import com.formulario.athena.documents.DocumentoService;
-import com.formulario.athena.documents.DocxGenerator;
 import com.formulario.athena.dto.AditivoRequestDTO;
 import com.formulario.athena.dto.AditivoResponseDTO;
 import com.formulario.athena.dto.AditivoResponseList;
@@ -12,6 +11,7 @@ import com.formulario.athena.model.AditivoContratual;
 import com.formulario.athena.model.AditivoHistorico;
 import com.formulario.athena.repository.AditivoRepository;
 import com.formulario.athena.repository.HistoricoRepository;
+import lombok.extern.log4j.Log4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,9 +20,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -74,6 +72,10 @@ public class AditivoServiceImpl implements AditivoService {
             throw new RuntimeException("Erro ao processar aditivo: " + e.getMessage(), e);
         }
     }
+
+
+
+
     @Override
     public AditivoResponseList listarTodosAditivos(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
         Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc")
