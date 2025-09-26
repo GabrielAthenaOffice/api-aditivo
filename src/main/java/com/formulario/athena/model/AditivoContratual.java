@@ -41,4 +41,6 @@ public class AditivoContratual {
     private String status; // vai ser preenchido depois que o forms for enviado
     private String localData; // necessario ser preenchido automaticamente
     private LocalDateTime criadoEm = LocalDateTime.now();
+
+    private String caminhoDocumento;
 }

@@ -1,6 +1,8 @@
 package com.formulario.athena.service;
 
 import com.formulario.athena.config.exceptions.APIExceptions;
+import com.formulario.athena.documents.DocumentoService;
+import com.formulario.athena.documents.DocxGenerator;
 import com.formulario.athena.dto.AditivoRequestDTO;
 import com.formulario.athena.dto.AditivoResponseDTO;
 import com.formulario.athena.dto.AditivoResponseList;
@@ -18,7 +20,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -30,31 +34,46 @@ public class AditivoServiceImpl implements AditivoService {
     @Autowired
     private HistoricoRepository historicoRepository;
 
+    @Autowired
+    private DocumentoService documentoService;
+
     @Override
+    @Transactional
     public AditivoResponseDTO createAditivo(AditivoRequestDTO dto) {
-        // Converte DTO em entidade
-        AditivoContratual aditivo = AditivoMapper.toEntity(dto);
-        aditivo.setStatus("ADITIVO CRIADO / AGUARDANDO RESPOSTA");
+        try {
+            // Converte DTO em entidade
+            AditivoContratual aditivo = AditivoMapper.toEntity(dto);
+            aditivo.setStatus("ADITIVO CRIADO / AGUARDANDO RESPOSTA");
 
-        System.out.println(">>> Salvando aditivo: " + aditivo);
+            AditivoContratual salvo = aditivoRepository.save(aditivo);
 
-        AditivoContratual salvo = aditivoRepository.save(aditivo);
+            // GERA O DOCUMENTO WORD
+            String caminhoDocumento = documentoService.gerarAditivoContratual(salvo);
 
-        // Salva histórico
-        AditivoHistorico historico = new AditivoHistorico();
-        historico.setEmpresaId(String.valueOf(salvo.getEmpresaId()));
-        historico.setEmpresaNome(salvo.getPessoaJuridicaNome());
-        historico.setAditivoId(salvo.getId());
-        historico.setStatus("RECEBIDO");
-        historico.setMensagem("Aditivo registrado com sucesso");
+            // Atualiza o aditivo com o caminho do documento gerado
+            salvo.setCaminhoDocumento(caminhoDocumento);
+            salvo.setStatus("DOCUMENTO_GERADO");
+            aditivoRepository.save(salvo);
 
-        historicoRepository.save(historico);
+            // Salva histórico
+            AditivoHistorico historico = new AditivoHistorico();
+            historico.setEmpresaId(String.valueOf(salvo.getEmpresaId()));
+            historico.setEmpresaNome(salvo.getPessoaJuridicaNome());
+            historico.setAditivoId(salvo.getId());
+            historico.setStatus("DOCUMENTO_GERADO");
+            historico.setMensagem("Aditivo registrado e documento gerado com sucesso: " + caminhoDocumento);
 
-        // Retorno padronizado
-        return new AditivoResponseDTO("SUCESSO",
-                "Aditivo registrado com sucesso", salvo.getId());
+            historicoRepository.save(historico);
+
+            // Retorno padronizado
+            return new AditivoResponseDTO("SUCESSO",
+                    "Aditivo registrado e documento gerado com sucesso",
+                    salvo.getId()); // Inclui o caminho do documento na resposta
+
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao processar aditivo: " + e.getMessage(), e);
+        }
     }
-
     @Override
     public AditivoResponseList listarTodosAditivos(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
         Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc")

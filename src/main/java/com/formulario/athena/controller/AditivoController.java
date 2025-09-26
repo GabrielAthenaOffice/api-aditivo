@@ -3,11 +3,15 @@ package com.formulario.athena.controller;
 import com.formulario.athena.config.AppConstantes;
 import com.formulario.athena.dto.*;
 import com.formulario.athena.mapper.AditivoResponseHistoricoDTO;
+import com.formulario.athena.model.AditivoContratual;
+import com.formulario.athena.repository.AditivoRepository;
 import com.formulario.athena.service.AditivoService;
 import com.formulario.athena.service.HistoricoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +26,9 @@ public class AditivoController {
 
     @Autowired
     private HistoricoService historicoService;
+
+    @Autowired
+    private AditivoRepository aditivoRepository;
 
     @PostMapping
     public ResponseEntity<AditivoResponseDTO> criar(@Valid @RequestBody AditivoRequestDTO dto) {
@@ -71,5 +78,17 @@ public class AditivoController {
 
         return new ResponseEntity<>(aditivoSimpleResponseDTO, HttpStatus.OK);
     }
+
+    @GetMapping("/{id}/documento")
+    public ResponseEntity<byte[]> baixarDocumento(@PathVariable String id) {
+        AditivoContratual aditivo = aditivoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Aditivo não encontrado"));
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=aditivo-" + id + ".docx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(aditivo.getCaminhoDocumento().getBytes());
+    }
+
 
 }
