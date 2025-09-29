@@ -15,7 +15,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -96,6 +95,7 @@ public class DocumentoService {
 
     private String gerarNomeArquivo(AditivoContratual aditivo) {
         String nomeSanitizado = "aditivo";
+
         if (aditivo.getPessoaJuridicaNome() != null) {
             nomeSanitizado = aditivo.getPessoaJuridicaNome()
                     .replaceAll("[^a-zA-Z0-9\\s]", "")
