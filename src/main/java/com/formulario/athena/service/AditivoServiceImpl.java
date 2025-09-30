@@ -11,7 +11,6 @@ import com.formulario.athena.model.AditivoContratual;
 import com.formulario.athena.model.AditivoHistorico;
 import com.formulario.athena.repository.AditivoRepository;
 import com.formulario.athena.repository.HistoricoRepository;
-import lombok.extern.log4j.Log4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -66,7 +65,9 @@ public class AditivoServiceImpl implements AditivoService {
             // Retorno padronizado
             return new AditivoResponseDTO("SUCESSO",
                     "Aditivo registrado e documento gerado com sucesso",
-                    salvo.getId()); // Inclui o caminho do documento na resposta
+                    salvo.getId(),
+                    caminhoDocumento,
+                    "/aditivos/" + salvo.getId() + "/download"); // Inclui o caminho do documento na resposta
 
         } catch (Exception e) {
             throw new RuntimeException("Erro ao processar aditivo: " + e.getMessage(), e);
@@ -136,5 +137,12 @@ public class AditivoServiceImpl implements AditivoService {
 
         return AditivoMapper.toSimpleResponse(aditivoContratual);
     }
+
+    @Override
+    public AditivoContratual findById(String id) {
+        return aditivoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Aditivo não encontrado com ID: " + id));
+    }
+
 
 }

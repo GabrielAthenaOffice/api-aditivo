@@ -36,7 +36,7 @@ public class AditivoRequestDTO {
     private String pessoaFisicaEndereco;
 
     @NotNull
-    private LocalDate dataInicioContrato;
+    private String dataInicioContrato;
 
     @NotBlank
     private String pessoaJuridicaNome;

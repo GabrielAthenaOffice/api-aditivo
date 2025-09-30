@@ -103,8 +103,8 @@ public class DocumentoService {
                     .toLowerCase();
         }
 
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-        return String.format("aditivo_%s_%s.docx", nomeSanitizado, timestamp);
+        // ✅ CORREÇÃO: Use o ID do aditivo em vez de timestamp
+        return String.format("aditivo_%s_%s.docx", nomeSanitizado, aditivo.getId());
     }
 
     private String formatarData(LocalDate data) {

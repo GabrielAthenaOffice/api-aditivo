@@ -9,12 +9,19 @@ import com.formulario.athena.service.AditivoService;
 import com.formulario.athena.service.HistoricoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -79,15 +86,36 @@ public class AditivoController {
         return new ResponseEntity<>(aditivoSimpleResponseDTO, HttpStatus.OK);
     }
 
-    @GetMapping("/{id}/documento")
-    public ResponseEntity<byte[]> baixarDocumento(@PathVariable String id) {
-        AditivoContratual aditivo = aditivoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Aditivo não encontrado"));
+    @GetMapping("/{id}/download")
+    public ResponseEntity<Resource> downloadAditivo(@PathVariable String id) {
+        try {
+            AditivoContratual aditivo = aditivoService.findById(id);
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=aditivo-" + id + ".docx")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(aditivo.getCaminhoDocumento().getBytes());
+            File file = new File(aditivo.getCaminhoDocumento());
+
+            if (!file.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Path path = Paths.get(file.getAbsolutePath());
+            Resource resource = new InputStreamResource(new FileInputStream(file));
+
+            // Determina o tipo de conteúdo
+            String contentType = Files.probeContentType(path);
+            if (contentType == null) {
+                contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            }
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"aditivo_" + aditivo.getPessoaJuridicaNome() + ".docx\"")
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .contentLength(file.length())
+                    .body(resource);
+
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
 

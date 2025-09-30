@@ -5,6 +5,8 @@ import com.formulario.athena.dto.AditivoResponseDTO;
 import com.formulario.athena.dto.AditivoSimpleResponseDTO;
 import com.formulario.athena.model.AditivoContratual;
 
+import java.time.LocalDate;
+
 public class AditivoMapper {
 
     private AditivoMapper() {
@@ -40,7 +42,7 @@ public class AditivoMapper {
         aditivo.setPessoaFisicaCpf(dto.getPessoaFisicaCpf());
         aditivo.setPessoaFisicaEndereco(dto.getPessoaFisicaEndereco());
 
-        aditivo.setDataInicioContrato(dto.getDataInicioContrato());
+        aditivo.setDataInicioContrato(LocalDate.parse(dto.getDataInicioContrato()));
 
         aditivo.setPessoaJuridicaNome(dto.getPessoaJuridicaNome());
         aditivo.setPessoaJuridicaCnpj(dto.getPessoaJuridicaCnpj());
