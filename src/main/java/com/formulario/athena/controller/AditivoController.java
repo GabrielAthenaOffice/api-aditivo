@@ -69,14 +69,14 @@ public class AditivoController {
                                                                             @RequestParam(name = "sortOrder", defaultValue = AppConstantes.SORT_DIR, required = false) String sortOrder) {
         AditivoResponseHistoricoDTO aditivoResponseHistoricoDTO = historicoService.listarHistoricos(pageNumber, pageSize, sortBy, sortOrder);
 
-        return new ResponseEntity<>(aditivoResponseHistoricoDTO, HttpStatus.FOUND);
+        return new ResponseEntity<>(aditivoResponseHistoricoDTO, HttpStatus.OK);
     }
 
     @GetMapping("/historico/empresa/nome/{nome}")
     public ResponseEntity<List<HistoricoResponseDTO>> historicoPorEmpresaNome(@PathVariable String nome) {
         List<HistoricoResponseDTO> historicoResponseDTOS = historicoService.listarHistoricoPorNome(nome);
 
-        return new ResponseEntity<>(historicoResponseDTOS, HttpStatus.FOUND);
+        return new ResponseEntity<>(historicoResponseDTOS, HttpStatus.OK);
     }
 
     @DeleteMapping("empresa/deletar-aditivo/{id}")
