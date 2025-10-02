@@ -32,8 +32,8 @@ public class AditivoController {
     @Autowired
     private AditivoRepository aditivoRepository;
 
-    @Autowired
-    private DocumentoService documentoService;
+    /*@Autowired
+    private DocumentoService documentoService;*/
 
     @PostMapping
     public ResponseEntity<AditivoResponseDTO> criar(@Valid @RequestBody AditivoRequestDTO dto) {
