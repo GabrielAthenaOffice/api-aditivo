@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
-//@Service
+@Service
 @Slf4j
 public class DocumentoService {
 
