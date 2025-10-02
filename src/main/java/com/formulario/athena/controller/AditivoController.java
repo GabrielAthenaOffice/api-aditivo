@@ -87,31 +87,29 @@ public class AditivoController {
     }
 
     @GetMapping("/{id}/download")
-    public ResponseEntity<Resource> downloadAditivo(@PathVariable String id) {
+    public ResponseEntity<byte[]> downloadAditivo(@PathVariable String id) {
         try {
             AditivoContratual aditivo = aditivoService.findById(id);
 
-            File file = new File(aditivo.getCaminhoDocumento());
+            // ✅ MUDANÇA: Busca os bytes diretamente do MongoDB
+            byte[] documentoBytes = aditivo.getDocumentoBytes();
 
-            if (!file.exists()) {
+            if (documentoBytes == null || documentoBytes.length == 0) {
                 return ResponseEntity.notFound().build();
             }
 
-            Path path = Paths.get(file.getAbsolutePath());
-            Resource resource = new InputStreamResource(new FileInputStream(file));
-
-            // Determina o tipo de conteúdo
-            String contentType = Files.probeContentType(path);
-            if (contentType == null) {
-                contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-            }
+            // Gera nome do arquivo
+            String nomeArquivo = String.format("aditivo_%s_%s.docx",
+                    aditivo.getPessoaJuridicaNome() != null ?
+                            aditivo.getPessoaJuridicaNome().replaceAll("[^a-zA-Z0-9]", "_") : "documento",
+                    aditivo.getId());
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"aditivo_" + aditivo.getPessoaJuridicaNome() + ".docx\"")
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .contentLength(file.length())
-                    .body(resource);
+                            "attachment; filename=\"" + nomeArquivo + "\"")
+                    .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                    .contentLength(documentoBytes.length)
+                    .body(documentoBytes);
 
         } catch (Exception e) {
             return ResponseEntity.notFound().build();

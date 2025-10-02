@@ -8,6 +8,7 @@ import org.apache.poi.xwpf.usermodel.*;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -24,7 +25,8 @@ public class DocumentoService {
     private static final String MODELO_PATH = "templates/AditivoContratual.docx";
     private static final String DESTINO_PATH = "aditivos-gerados/";
 
-    public String gerarAditivoContratual(AditivoContratual aditivo) {
+    // ✅ Retorna byte[] em vez de salvar arquivo
+    public byte[] gerarAditivoContratual(AditivoContratual aditivo) {
         try {
             ClassPathResource modeloResource = new ClassPathResource(MODELO_PATH);
 
@@ -32,30 +34,22 @@ public class DocumentoService {
                 throw new FileNotFoundException("Template não encontrado: " + MODELO_PATH);
             }
 
-            // Dados para o template SIMPLIFICADO
             Map<String, Object> data = criarMapaDadosSimplificado(aditivo);
             log.info("Gerando documento com dados: {}", data.keySet());
 
-            // POI-TL com configuração básica
             Configure config = Configure.builder().build();
 
-            // Compila e renderiza
+            // ✅ Usar InputStream diretamente
             XWPFTemplate template = XWPFTemplate.compile(modeloResource.getInputStream(), config)
                     .render(data);
 
-            // Salva o documento
-            String nomeArquivo = gerarNomeArquivo(aditivo);
-            String caminhoCompleto = DESTINO_PATH + nomeArquivo;
+            // ✅ Converter para byte[] em vez de salvar arquivo
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            template.write(outputStream);
+            template.close();
 
-            File destinoDir = new File(DESTINO_PATH);
-            if (!destinoDir.exists()) {
-                destinoDir.mkdirs();
-            }
-
-            template.writeAndClose(new FileOutputStream(caminhoCompleto));
-
-            log.info("✅ Documento gerado com SUCESSO: {}", caminhoCompleto);
-            return caminhoCompleto;
+            log.info("✅ Documento gerado com SUCESSO - Tamanho: {} bytes", outputStream.size());
+            return outputStream.toByteArray();
 
         } catch (Exception e) {
             log.error("❌ Erro ao gerar documento: {}", e.getMessage(), e);

@@ -44,11 +44,11 @@ public class AditivoServiceImpl implements AditivoService {
 
             AditivoContratual salvo = aditivoRepository.save(aditivo);
 
-            // GERA O DOCUMENTO WORD
-            String caminhoDocumento = documentoService.gerarAditivoContratual(salvo);
+            // ✅ MUDANÇA: Gera o documento em memória (NÃO salva arquivo)
+            byte[] documento = documentoService.gerarAditivoContratual(salvo);
 
-            // Atualiza o aditivo com o caminho do documento gerado
-            salvo.setCaminhoDocumento(caminhoDocumento);
+            // ✅ MUDANÇA: Armazena o documento como byte[] no MongoDB
+            salvo.setDocumentoBytes(documento);
             salvo.setStatus("DOCUMENTO_GERADO");
             aditivoRepository.save(salvo);
 
@@ -58,7 +58,7 @@ public class AditivoServiceImpl implements AditivoService {
             historico.setEmpresaNome(salvo.getPessoaJuridicaNome());
             historico.setAditivoId(salvo.getId());
             historico.setStatus("DOCUMENTO_GERADO");
-            historico.setMensagem("Aditivo registrado e documento gerado com sucesso: " + caminhoDocumento);
+            historico.setMensagem("Aditivo registrado e documento gerado com sucesso: " + salvo.getId());
 
             historicoRepository.save(historico);
 
@@ -66,7 +66,7 @@ public class AditivoServiceImpl implements AditivoService {
             return new AditivoResponseDTO("SUCESSO",
                     "Aditivo registrado e documento gerado com sucesso",
                     salvo.getId(),
-                    caminhoDocumento,
+                    null,
                     "/aditivos/" + salvo.getId() + "/download"); // Inclui o caminho do documento na resposta
 
         } catch (Exception e) {

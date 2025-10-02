@@ -42,5 +42,5 @@ public class AditivoContratual {
     private String localData; // necessario ser preenchido automaticamente
     private LocalDateTime criadoEm = LocalDateTime.now();
 
-    private String caminhoDocumento;
+    private byte[] documentoBytes;
 }

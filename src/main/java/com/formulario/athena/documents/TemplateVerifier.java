@@ -8,6 +8,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 @Component
 @Slf4j
@@ -22,20 +23,16 @@ public class TemplateVerifier {
             log.info("Template existe: {}", templateExiste);
 
             if (templateExiste) {
-                try {
-                    log.info("Caminho do template: {}", resource.getFile().getAbsolutePath());
-                } catch (IOException e) {
-                    log.warn("Não foi possível obter caminho absoluto (pode estar dentro do JAR)");
+                // ✅ Testa se consegue ler o arquivo
+                try (InputStream is = resource.getInputStream()) {
+                    log.info("✅ Template pode ser lido com sucesso");
                 }
             } else {
                 log.error("❌ TEMPLATE NÃO ENCONTRADO!");
-                log.error("Coloque o arquivo AditivoContratual.docx em: src/main/resources/templates/");
-                // Não lança exceção, apenas loga o erro
             }
 
         } catch (Exception e) {
             log.error("Erro ao verificar template: {}", e.getMessage());
-            // Não relança a exceção para não parar a aplicação
         }
     }
 }
