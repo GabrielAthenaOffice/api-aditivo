@@ -85,9 +85,9 @@ public class AditivoController {
     }
 
     @GetMapping("/{id}/download")
-    public ResponseEntity<byte[]> downloadAditivo(@PathVariable String id) {
+    public ResponseEntity<String> downloadAditivo(@PathVariable String id) {
         try {
-            AditivoContratual aditivo = aditivoService.findById(id);
+            /*AditivoContratual aditivo = aditivoService.findById(id);
 
             byte[] documentoBytes = aditivo.getDocumentoBytes();
 
@@ -113,7 +113,9 @@ public class AditivoController {
                             "attachment; filename=\"" + nomeArquivo + "\"")
                     .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
                     .contentLength(documentoBytes.length)
-                    .body(documentoBytes);
+                    .body(documentoBytes); */
+
+            return ResponseEntity.ok("Download em implementação - ID: " + id);
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

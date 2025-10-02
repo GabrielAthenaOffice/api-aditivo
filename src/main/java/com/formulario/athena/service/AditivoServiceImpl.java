@@ -45,12 +45,12 @@ public class AditivoServiceImpl implements AditivoService {
             AditivoContratual salvo = aditivoRepository.save(aditivo);
 
             // ✅ MUDANÇA: Gera o documento em memória (NÃO salva arquivo)
-            byte[] documento = documentoService.gerarAditivoContratual(salvo);
+            //byte[] documento = documentoService.gerarAditivoContratual(salvo);
 
             // ✅ MUDANÇA: Armazena o documento como byte[] no MongoDB
-            salvo.setDocumentoBytes(documento);
+            /*salvo.setDocumentoBytes(documento);
             salvo.setStatus("DOCUMENTO_GERADO");
-            aditivoRepository.save(salvo);
+            aditivoRepository.save(salvo);*/
 
             // Salva histórico
             AditivoHistorico historico = new AditivoHistorico();
