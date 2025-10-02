@@ -32,8 +32,8 @@ public class AditivoController {
     @Autowired
     private AditivoRepository aditivoRepository;
 
-    /*@Autowired
-    private DocumentoService documentoService;*/
+    @Autowired
+    private DocumentoService documentoService;
 
     @PostMapping
     public ResponseEntity<AditivoResponseDTO> criar(@Valid @RequestBody AditivoRequestDTO dto) {
@@ -85,9 +85,9 @@ public class AditivoController {
     }
 
     @GetMapping("/{id}/download")
-    public ResponseEntity<String> downloadAditivo(@PathVariable String id) {
+    public ResponseEntity<byte[]> downloadAditivo(@PathVariable String id) {
         try {
-            /*AditivoContratual aditivo = aditivoService.findById(id);
+            AditivoContratual aditivo = aditivoService.findById(id);
 
             byte[] documentoBytes = aditivo.getDocumentoBytes();
 
@@ -113,9 +113,7 @@ public class AditivoController {
                             "attachment; filename=\"" + nomeArquivo + "\"")
                     .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
                     .contentLength(documentoBytes.length)
-                    .body(documentoBytes); */
-
-            return ResponseEntity.ok("Download em implementação - ID: " + id);
+                    .body(documentoBytes);
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
