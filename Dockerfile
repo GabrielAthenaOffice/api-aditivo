@@ -18,7 +18,7 @@ COPY --from=build /app/target/*.jar app.jar
 
 # Otimização JVM para containers
 ENV JAVA_OPTS="-Xmx256m -Xms128m -XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
-EXPOSE 8080
+EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
