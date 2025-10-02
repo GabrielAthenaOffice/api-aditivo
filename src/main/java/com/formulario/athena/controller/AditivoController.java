@@ -1,6 +1,7 @@
 package com.formulario.athena.controller;
 
 import com.formulario.athena.config.AppConstantes;
+import com.formulario.athena.documents.DocumentoService;
 import com.formulario.athena.dto.*;
 import com.formulario.athena.mapper.AditivoResponseHistoricoDTO;
 import com.formulario.athena.model.AditivoContratual;
@@ -8,24 +9,18 @@ import com.formulario.athena.repository.AditivoRepository;
 import com.formulario.athena.service.AditivoService;
 import com.formulario.athena.service.HistoricoService;
 import jakarta.validation.Valid;
+import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.InputStreamResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
 @RequestMapping("/aditivos")
+@Log
 public class AditivoController {
 
     @Autowired
@@ -36,6 +31,9 @@ public class AditivoController {
 
     @Autowired
     private AditivoRepository aditivoRepository;
+
+    @Autowired
+    private DocumentoService documentoService;
 
     @PostMapping
     public ResponseEntity<AditivoResponseDTO> criar(@Valid @RequestBody AditivoRequestDTO dto) {
@@ -91,11 +89,17 @@ public class AditivoController {
         try {
             AditivoContratual aditivo = aditivoService.findById(id);
 
-            // ✅ MUDANÇA: Busca os bytes diretamente do MongoDB
             byte[] documentoBytes = aditivo.getDocumentoBytes();
 
+            // ✅ VERIFICA se o campo existe ou é vazio
             if (documentoBytes == null || documentoBytes.length == 0) {
-                return ResponseEntity.notFound().build();
+                // ✅ GERA o documento na hora se não existir
+                log.info("Documento não encontrado no banco, gerando agora...");
+                documentoBytes = documentoService.gerarAditivoContratual(aditivo);
+
+                // ✅ SALVA no banco para futuras requisições
+                aditivo.setDocumentoBytes(documentoBytes);
+                aditivoRepository.save(aditivo);
             }
 
             // Gera nome do arquivo
@@ -112,7 +116,7 @@ public class AditivoController {
                     .body(documentoBytes);
 
         } catch (Exception e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
