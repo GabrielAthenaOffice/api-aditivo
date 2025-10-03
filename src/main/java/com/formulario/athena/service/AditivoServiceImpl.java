@@ -38,19 +38,31 @@ public class AditivoServiceImpl implements AditivoService {
     @Transactional
     public AditivoResponseDTO createAditivo(AditivoRequestDTO dto) {
         try {
+            System.out.println(">>> 1. INICIANDO createAditivo - DTO: " + dto);
+
             // Converte DTO em entidade
             AditivoContratual aditivo = AditivoMapper.toEntity(dto);
             aditivo.setStatus("ADITIVO CRIADO / AGUARDANDO RESPOSTA");
 
+            System.out.println(">>> 2. Entidade criada: " + aditivo);
+            System.out.println(">>> 3. Antes do primeiro save - ID: " + aditivo.getId());
+
+            // PRIMEIRO SAVE
             AditivoContratual salvo = aditivoRepository.save(aditivo);
 
-            // ✅ MUDANÇA: Gera o documento em memória (NÃO salva arquivo)
-            byte[] documento = documentoService.gerarAditivoContratual(salvo);
+            System.out.println(">>> 4. DEPOIS do primeiro save - ID: " + salvo.getId());
+            System.out.println(">>> 5. Entidade salva: " + salvo);
 
-            // ✅ MUDANÇA: Armazena o documento como byte[] no MongoDB
+            // Gera documento
+            byte[] documento = documentoService.gerarAditivoContratual(salvo);
+            System.out.println(">>> 6. Documento gerado - tamanho: " + documento.length);
+
+            // SEGUNDO SAVE (com documento)
             salvo.setDocumentoBytes(documento);
             salvo.setStatus("DOCUMENTO_GERADO");
-            aditivoRepository.save(salvo);
+            AditivoContratual finalSalvo = aditivoRepository.save(salvo);
+
+            System.out.println(">>> 7. SEGUNDO save realizado - ID: " + finalSalvo.getId());
 
             // Salva histórico
             AditivoHistorico historico = new AditivoHistorico();
@@ -61,15 +73,17 @@ public class AditivoServiceImpl implements AditivoService {
             historico.setMensagem("Aditivo registrado e documento gerado com sucesso: " + salvo.getId());
 
             historicoRepository.save(historico);
+            System.out.println(">>> 8. Histórico salvo");
 
-            // Retorno padronizado
             return new AditivoResponseDTO("SUCESSO",
                     "Aditivo registrado e documento gerado com sucesso",
                     salvo.getId(),
                     null,
-                    "/aditivos/" + salvo.getId() + "/download"); // Inclui o caminho do documento na resposta
+                    "/aditivos/" + salvo.getId() + "/download");
 
         } catch (Exception e) {
+            System.out.println(">>> ERRO: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Erro ao processar aditivo: " + e.getMessage(), e);
         }
     }
