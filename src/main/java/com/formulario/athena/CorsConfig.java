@@ -18,6 +18,8 @@ public class CorsConfig {
                                 "http://localhost:3000",
                                 "http://127.0.0.1:3000",
                                 "http://localhost:5000",
+                                "http://localhost:5173",
+                                "http://localhost:5174",
                                 "file://", // ✅ Para arquivos HTML locais
                                 "null"     // ✅ Para origem null (arquivos locais)
                         )
