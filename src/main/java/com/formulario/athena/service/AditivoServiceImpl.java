@@ -79,7 +79,7 @@ public class AditivoServiceImpl implements AditivoService {
                     "Aditivo registrado e documento gerado com sucesso",
                     salvo.getId(),
                     null,
-                    "/aditivos/" + salvo.getId() + "/download");
+                    "/aditivos/" + salvo.getId() + "/baixar");
 
         } catch (Exception e) {
             System.out.println(">>> ERRO: " + e.getMessage());
