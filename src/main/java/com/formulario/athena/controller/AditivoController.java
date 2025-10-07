@@ -84,9 +84,15 @@ public class AditivoController {
         return new ResponseEntity<>(aditivoSimpleResponseDTO, HttpStatus.OK);
     }
 
-    @GetMapping("/{id}/baixar")
+    @GetMapping("/teste")
+    public String teste() {
+        System.out.println(">>> ✅ ENDPOINT /teste CHAMADO");
+        return "TESTE OK";
+    }
+
+    @GetMapping("/baixar/{id}")
     public ResponseEntity<byte[]> downloadAditivo(@PathVariable String id) {
-        System.out.println(">>> 📥 ENDPOINT /baixar ACESSADO - ID: " + id);
+        System.out.println(">>> 📥 ENDPOINT /baixar/{id} ACESSADO - ID: " + id);
         try {
             AditivoContratual aditivo = aditivoService.findById(id);
 
