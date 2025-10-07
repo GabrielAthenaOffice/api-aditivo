@@ -99,29 +99,30 @@ public class AditivoController {
             AditivoContratual aditivo = aditivoService.findById(id);
 
             byte[] documentoBytes = aditivo.getDocumentoBytes();
+
+            // Se não existe OU veio vazio do DB, regenere agora
             if (documentoBytes == null || documentoBytes.length == 0) {
-                log.info("Documento não encontrado no banco, gerando agora...");
+                log.info("Documento ausente/vazio no DB. Gerando novamente...");
                 documentoBytes = documentoService.gerarAditivoContratual(aditivo);
                 aditivo.setDocumentoBytes(documentoBytes);
                 aditivoRepository.save(aditivo);
             }
 
+            // Nome do arquivo
             String nomeArquivo = String.format("aditivo_%s_%s.docx",
                     aditivo.getPessoaJuridicaNome() != null
                             ? aditivo.getPessoaJuridicaNome().replaceAll("[^a-zA-Z0-9]", "_")
                             : "documento",
                     aditivo.getId());
 
-            // Content-Disposition com fallback ASCII + UTF-8
             String ascii = "filename=\"" + nomeArquivo + "\"";
             String utf8  = "filename*=UTF-8''" + java.net.URLEncoder.encode(nomeArquivo, java.nio.charset.StandardCharsets.UTF_8);
 
+            // NÃO definir manualmente contentLength — deixe o Spring setar
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; " + ascii + "; " + utf8)
                     .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-                    // EXPONHA OS HEADERS PRO FRONT
                     .header("Access-Control-Expose-Headers", "Content-Disposition, Content-Length, Content-Type")
-                    .contentLength(documentoBytes.length)
                     .body(documentoBytes);
 
         } catch (Exception e) {

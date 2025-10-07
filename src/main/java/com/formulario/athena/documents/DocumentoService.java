@@ -9,12 +9,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,33 +18,44 @@ import java.util.Map;
 public class DocumentoService {
 
     private static final String MODELO_PATH = "templates/AditivoContratual.docx";
-    private static final String DESTINO_PATH = "aditivos-gerados/";
 
-    // ✅ Retorna byte[] em vez de salvar arquivo
     public byte[] gerarAditivoContratual(AditivoContratual aditivo) {
         try {
             ClassPathResource modeloResource = new ClassPathResource(MODELO_PATH);
-
             if (!modeloResource.exists()) {
-                throw new FileNotFoundException("Template não encontrado: " + MODELO_PATH);
+                throw new FileNotFoundException("Template não encontrado no classpath: " + MODELO_PATH);
             }
 
             Map<String, Object> data = criarMapaDadosSimplificado(aditivo);
-            log.info("Gerando documento com dados: {}", data.keySet());
+            log.info("Gerando documento. Placeholders: {}", data.keySet());
 
             Configure config = Configure.builder().build();
 
-            // ✅ Usar InputStream diretamente
-            XWPFTemplate template = XWPFTemplate.compile(modeloResource.getInputStream(), config)
-                    .render(data);
+            // Fechamento garantido
+            try (var in = modeloResource.getInputStream();
+                 var template = XWPFTemplate.compile(in, config).render(data);
+                 var bos = new ByteArrayOutputStream()) {
 
-            // ✅ Converter para byte[] em vez de salvar arquivo
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            template.write(outputStream);
-            template.close();
+                template.write(bos);
+                // template.close() desnecessário com try-with-resources
 
-            log.info("✅ Documento gerado com SUCESSO - Tamanho: {} bytes", outputStream.size());
-            return outputStream.toByteArray();
+                byte[] bytes = bos.toByteArray();
+                log.info("✅ DOCX gerado - tamanho: {} bytes", bytes.length);
+
+                // Diagnóstico: verificar assinatura ZIP "PK"
+                if (bytes.length >= 2) {
+                    log.info(String.format("Magic bytes: %02X %02X", bytes[0], bytes[1]));
+                }
+
+                if (bytes.length == 0) {
+                    throw new IllegalStateException("Documento gerado com 0 bytes");
+                }
+                if (!(bytes.length >= 2 && bytes[0] == 0x50 && bytes[1] == 0x4B)) {
+                    log.warn("DOCX sem assinatura PK. Verifique template/placeholders.");
+                }
+
+                return bytes;
+            }
 
         } catch (Exception e) {
             log.error("❌ Erro ao gerar documento: {}", e.getMessage(), e);
@@ -60,49 +66,29 @@ public class DocumentoService {
     private Map<String, Object> criarMapaDadosSimplificado(AditivoContratual aditivo) {
         Map<String, Object> data = new HashMap<>();
 
-        // Unidade Athena
-        data.put("unidadeNome", valorOuVazio(aditivo.getUnidadeNome()));
-        data.put("unidadeCnpj", valorOuVazio(aditivo.getUnidadeCnpj()));
-        data.put("unidadeEndereco", valorOuVazio(aditivo.getUnidadeEndereco()));
+        // Placeholders devem existir IGUAIS no DOCX: {{unidadeNome}}, etc.
+        data.put("unidadeNome", nv(aditivo.getUnidadeNome()));
+        data.put("unidadeCnpj", nv(aditivo.getUnidadeCnpj()));
+        data.put("unidadeEndereco", nv(aditivo.getUnidadeEndereco()));
 
-        // Pessoa Física
-        data.put("pessoaFisicaNome", valorOuVazio(aditivo.getPessoaFisicaNome()));
-        data.put("pessoaFisicaCpf", valorOuVazio(aditivo.getPessoaFisicaCpf()));
-        data.put("pessoaFisicaEndereco", valorOuVazio(aditivo.getPessoaFisicaEndereco()));
+        data.put("pessoaFisicaNome", nv(aditivo.getPessoaFisicaNome()));
+        data.put("pessoaFisicaCpf", nv(aditivo.getPessoaFisicaCpf()));
+        data.put("pessoaFisicaEndereco", nv(aditivo.getPessoaFisicaEndereco()));
 
-        // Pessoa Jurídica
-        data.put("pessoaJuridicaNome", valorOuVazio(aditivo.getPessoaJuridicaNome()));
-        data.put("pessoaJuridicaCnpj", valorOuVazio(aditivo.getPessoaJuridicaCnpj()));
-        data.put("pessoaJuridicaEndereco", valorOuVazio(aditivo.getPessoaJuridicaEndereco()));
+        data.put("pessoaJuridicaNome", nv(aditivo.getPessoaJuridicaNome()));
+        data.put("pessoaJuridicaCnpj", nv(aditivo.getPessoaJuridicaCnpj()));
+        data.put("pessoaJuridicaEndereco", nv(aditivo.getPessoaJuridicaEndereco()));
 
-        // Datas
         data.put("dataInicioContrato", formatarData(aditivo.getDataInicioContrato()));
-        data.put("localData", valorOuVazio(aditivo.getLocalData()));
-        data.put("dataAtual", LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        data.put("localData", nv(aditivo.getLocalData()));
+        data.put("dataAtual", java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
 
         return data;
     }
 
-    private String valorOuVazio(String valor) {
-        return valor != null ? valor : "";
-    }
+    private String nv(String v) { return v != null ? v : ""; }
 
-    private String gerarNomeArquivo(AditivoContratual aditivo) {
-        String nomeSanitizado = "aditivo";
-
-        if (aditivo.getPessoaJuridicaNome() != null) {
-            nomeSanitizado = aditivo.getPessoaJuridicaNome()
-                    .replaceAll("[^a-zA-Z0-9\\s]", "")
-                    .replaceAll("\\s+", "_")
-                    .toLowerCase();
-        }
-
-        // ✅ CORREÇÃO: Use o ID do aditivo em vez de timestamp
-        return String.format("aditivo_%s_%s.docx", nomeSanitizado, aditivo.getId());
-    }
-
-    private String formatarData(LocalDate data) {
-        if (data == null) return "";
-        return data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+    private String formatarData(java.time.LocalDate data) {
+        return data == null ? "" : data.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 }
