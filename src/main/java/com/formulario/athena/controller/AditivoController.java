@@ -90,39 +90,42 @@ public class AditivoController {
         return "TESTE OK";
     }
 
-    @GetMapping("/baixar/{id}")
+    @GetMapping(
+            value = "/{id}/download",
+            produces = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
     public ResponseEntity<byte[]> downloadAditivo(@PathVariable String id) {
-        System.out.println(">>> 📥 ENDPOINT /baixar/{id} ACESSADO - ID: " + id);
         try {
             AditivoContratual aditivo = aditivoService.findById(id);
 
             byte[] documentoBytes = aditivo.getDocumentoBytes();
-
-            // ✅ VERIFICA se o campo existe ou é vazio
             if (documentoBytes == null || documentoBytes.length == 0) {
-                // ✅ GERA o documento na hora se não existir
                 log.info("Documento não encontrado no banco, gerando agora...");
                 documentoBytes = documentoService.gerarAditivoContratual(aditivo);
-
-                // ✅ SALVA no banco para futuras requisições
                 aditivo.setDocumentoBytes(documentoBytes);
                 aditivoRepository.save(aditivo);
             }
 
-            // Gera nome do arquivo
             String nomeArquivo = String.format("aditivo_%s_%s.docx",
-                    aditivo.getPessoaJuridicaNome() != null ?
-                            aditivo.getPessoaJuridicaNome().replaceAll("[^a-zA-Z0-9]", "_") : "documento",
+                    aditivo.getPessoaJuridicaNome() != null
+                            ? aditivo.getPessoaJuridicaNome().replaceAll("[^a-zA-Z0-9]", "_")
+                            : "documento",
                     aditivo.getId());
 
+            // Content-Disposition com fallback ASCII + UTF-8
+            String ascii = "filename=\"" + nomeArquivo + "\"";
+            String utf8  = "filename*=UTF-8''" + java.net.URLEncoder.encode(nomeArquivo, java.nio.charset.StandardCharsets.UTF_8);
+
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + nomeArquivo + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; " + ascii + "; " + utf8)
                     .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                    // EXPONHA OS HEADERS PRO FRONT
+                    .header("Access-Control-Expose-Headers", "Content-Disposition, Content-Length, Content-Type")
                     .contentLength(documentoBytes.length)
                     .body(documentoBytes);
 
         } catch (Exception e) {
+            log.severe("Erro no download: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

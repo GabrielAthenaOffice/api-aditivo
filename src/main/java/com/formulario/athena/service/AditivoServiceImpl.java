@@ -12,6 +12,7 @@ import com.formulario.athena.model.AditivoHistorico;
 import com.formulario.athena.repository.AditivoRepository;
 import com.formulario.athena.repository.HistoricoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +34,9 @@ public class AditivoServiceImpl implements AditivoService {
 
     @Autowired
     private DocumentoService documentoService;
+
+    @Value("${aditivo.base-url}")
+    private String baseUrl; // ex: https://api-aditivo-production-ed80.up.railway.app
 
     @Override
     @Transactional
@@ -75,11 +79,14 @@ public class AditivoServiceImpl implements AditivoService {
             historicoRepository.save(historico);
             System.out.println(">>> 8. Histórico salvo");
 
+            // URL ABSOLUTA E ROTA PADRÃO
+            String urlDownload = String.format("%s/aditivos/%s/download", trimRight(baseUrl), salvo.getId());
+
             return new AditivoResponseDTO("SUCESSO",
                     "Aditivo registrado e documento gerado com sucesso",
                     salvo.getId(),
                     null,
-                    "/aditivos/" + salvo.getId() + "/baixar");
+                    urlDownload);
 
         } catch (Exception e) {
             System.out.println(">>> ERRO: " + e.getMessage());
@@ -88,8 +95,9 @@ public class AditivoServiceImpl implements AditivoService {
         }
     }
 
-
-
+    private String trimRight(String s) {
+        return s != null && s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
+    }
 
     @Override
     public AditivoResponseList listarTodosAditivos(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
