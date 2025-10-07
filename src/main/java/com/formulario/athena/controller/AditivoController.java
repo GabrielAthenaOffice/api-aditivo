@@ -78,7 +78,7 @@ public class AditivoController {
     }
 
     @DeleteMapping("empresa/deletar-aditivo/{id}")
-    public ResponseEntity<AditivoSimpleResponseDTO> deletarAditivo(Long id) {
+    public ResponseEntity<AditivoSimpleResponseDTO> deletarAditivo(@PathVariable Long id) {
         AditivoSimpleResponseDTO aditivoSimpleResponseDTO = aditivoService.deleteAditivo(id);
 
         return new ResponseEntity<>(aditivoSimpleResponseDTO, HttpStatus.OK);
@@ -86,6 +86,7 @@ public class AditivoController {
 
     @GetMapping("/{id}/baixar")
     public ResponseEntity<byte[]> downloadAditivo(@PathVariable String id) {
+        System.out.println(">>> 📥 ENDPOINT /baixar ACESSADO - ID: " + id);
         try {
             AditivoContratual aditivo = aditivoService.findById(id);
 
