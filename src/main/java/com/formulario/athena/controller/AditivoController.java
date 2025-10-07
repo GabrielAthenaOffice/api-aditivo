@@ -84,7 +84,7 @@ public class AditivoController {
         return new ResponseEntity<>(aditivoSimpleResponseDTO, HttpStatus.OK);
     }
 
-    @GetMapping("/{id}/download")
+    @GetMapping("/{id}/baixar")
     public ResponseEntity<byte[]> downloadAditivo(@PathVariable String id) {
         try {
             AditivoContratual aditivo = aditivoService.findById(id);
