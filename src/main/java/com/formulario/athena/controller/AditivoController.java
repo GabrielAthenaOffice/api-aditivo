@@ -90,6 +90,11 @@ public class AditivoController {
         return "TESTE OK";
     }
 
+    @CrossOrigin(
+            origins = { "http://localhost:5173", "http://127.0.0.1:5173", "https://app.athenaoffice.com.br" },
+            allowCredentials = "false",
+            exposedHeaders = { "Content-Disposition","Content-Length","Content-Type" }
+    )
     @GetMapping(
             value = "/{id}/download",
             produces = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"

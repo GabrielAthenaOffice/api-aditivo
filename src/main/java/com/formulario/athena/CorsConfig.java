@@ -12,20 +12,20 @@ public class CorsConfig {
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
-            public void addCorsMappings(CorsRegistry registry) {
+            public void addCorsMappings(org.springframework.web.servlet.config.annotation.CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins(
-                                "http://localhost:3000",
-                                "http://127.0.0.1:3000",
-                                "http://localhost:5000",
-                                "http://localhost:5173",
-                                "http://localhost:5174",
-                                "file://", // ✅ Para arquivos HTML locais
-                                "null"     // ✅ Para origem null (arquivos locais)
+                        .allowedOriginPatterns(
+                                "http://localhost:*",
+                                "http://127.0.0.1:*",
+                                "https://*.athenaoffice.com.br",  // ajuste pro teu domínio real
+                                "https://*.vercel.app",           // se usa Vercel
+                                "https://*.netlify.app"           // se usa Netlify
                         )
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedMethods("GET","POST","PUT","DELETE","OPTIONS")
                         .allowedHeaders("*")
-                        .allowCredentials(true);
+                        .exposedHeaders("Content-Disposition","Content-Length","Content-Type")
+                        .allowCredentials(false)   // como você NÃO usa cookie/sessão, deixa false
+                        .maxAge(3600);
             }
         };
     }
