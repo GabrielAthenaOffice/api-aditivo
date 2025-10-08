@@ -92,10 +92,8 @@ public class AditivoController {
 
     @CrossOrigin(
             origins = {
-                    "http://localhost:5173",
-                    "http://127.0.0.1:5173"
-                    // coloque aqui também o domínio HTTPS do front em produção, ex:
-                    // "https://app.athenaoffice.com.br"
+                    "https://front-correspondencias-athena.vercel.app",
+                    "http://localhost:5173", "http://127.0.0.1:5173"
             },
             allowCredentials = "false",
             exposedHeaders = { "Content-Disposition","Content-Length","Content-Type" }
