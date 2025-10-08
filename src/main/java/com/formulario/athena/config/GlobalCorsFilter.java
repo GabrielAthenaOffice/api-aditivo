@@ -15,18 +15,24 @@ public class GlobalCorsFilter {
 
     @Bean
     public FilterRegistrationBean<CorsFilter> corsFilter() {
-        CorsConfiguration c = new CorsConfiguration();
-        c.setAllowCredentials(false); // você não usa sessão/cookie
-        c.setAllowedOriginPatterns(List.of("*"));
-        c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
-        c.setAllowedHeaders(List.of("*"));
-        c.setExposedHeaders(List.of("Content-Disposition","Content-Length","Content-Type"));
+        var cfg = new CorsConfiguration();
+        cfg.setAllowCredentials(false); // não usa cookie
+        cfg.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "https://front-correspondencias-athena.vercel.app",
+                "https://*.athenaoffice.com.br" // se tiver domínio próprio
+        ));
+        cfg.setAllowedHeaders(List.of("*"));
+        cfg.setExposedHeaders(List.of("Content-Disposition","Content-Length","Content-Type"));
+        // 👇 explícito (melhor p/ preflight)
+        cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
 
-        UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
-        src.registerCorsConfiguration("/**", c);
+        var src = new UrlBasedCorsConfigurationSource();
+        src.registerCorsConfiguration("/**", cfg);
 
-        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(src));
-        bean.setOrder(Ordered.HIGHEST_PRECEDENCE); // garante que roda antes de tudo
+        var bean = new FilterRegistrationBean<>(new CorsFilter(src));
+        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return bean;
     }
 }
