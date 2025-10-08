@@ -17,13 +17,7 @@ public class GlobalCorsFilter {
     public FilterRegistrationBean<CorsFilter> corsFilter() {
         CorsConfiguration c = new CorsConfiguration();
         c.setAllowCredentials(false); // você não usa sessão/cookie
-        c.setAllowedOriginPatterns(List.of(
-                "http://localhost:*",
-                "http://127.0.0.1:*",
-                "https://*.athenaoffice.com.br",   // ajuste pro domínio real do front
-                "https://*.vercel.app",
-                "https://*.netlify.app"
-        ));
+        c.setAllowedOriginPatterns(List.of("*"));
         c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         c.setAllowedHeaders(List.of("*"));
         c.setExposedHeaders(List.of("Content-Disposition","Content-Length","Content-Type"));
