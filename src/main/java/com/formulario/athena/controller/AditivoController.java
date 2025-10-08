@@ -91,7 +91,7 @@ public class AditivoController {
     }
 
     @CrossOrigin(
-            origins = { "http://localhost:5173", "http://127.0.0.1:5173", "https://app.athenaoffice.com.br" },
+            origins = { "http://localhost:5173", "http://127.0.0.1:5173" },
             allowCredentials = "false",
             exposedHeaders = { "Content-Disposition","Content-Length","Content-Type" }
     )
