@@ -13,26 +13,26 @@ import java.util.List;
 @Configuration
 public class GlobalCorsFilter {
 
-    @Bean
-    public FilterRegistrationBean<CorsFilter> corsFilter() {
-        var cfg = new CorsConfiguration();
-        cfg.setAllowCredentials(false); // não usa cookie
-        cfg.setAllowedOriginPatterns(List.of(
-                "http://localhost:*",
-                "http://127.0.0.1:*",
-                "https://front-correspondencias-athena.vercel.app",
-                "https://*.athenaoffice.com.br" // se tiver domínio próprio
-        ));
-        cfg.setAllowedHeaders(List.of("*"));
-        cfg.setExposedHeaders(List.of("Content-Disposition","Content-Length","Content-Type"));
-        // 👇 explícito (melhor p/ preflight)
-        cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
 
-        var src = new UrlBasedCorsConfigurationSource();
+    @Bean
+    public FilterRegistrationBean<org.springframework.web.filter.CorsFilter> corsFilter() {
+        var cfg = new org.springframework.web.cors.CorsConfiguration();
+        cfg.setAllowCredentials(false);
+        cfg.setAllowedOriginPatterns(java.util.List.of(
+                "https://front-correspondencias-athena.vercel.app",
+                "http://localhost:*",
+                "http://127.0.0.1:*"
+        ));
+        cfg.setAllowedMethods(java.util.List.of("GET","POST","PUT","DELETE","OPTIONS"));
+        cfg.setAllowedHeaders(java.util.List.of("*"));
+        cfg.setExposedHeaders(java.util.List.of("Content-Disposition","Content-Length","Content-Type"));
+
+        var src = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
         src.registerCorsConfiguration("/**", cfg);
 
-        var bean = new FilterRegistrationBean<>(new CorsFilter(src));
-        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        var bean = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(new org.springframework.web.filter.CorsFilter(src));
+        bean.setOrder(org.springframework.core.Ordered.HIGHEST_PRECEDENCE);
         return bean;
     }
 }
+
