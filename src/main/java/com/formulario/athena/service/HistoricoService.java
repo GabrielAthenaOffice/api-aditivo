@@ -56,9 +56,6 @@ public class HistoricoService {
     public List<HistoricoResponseDTO> listarHistoricoPorNome(String nomeDaEmpresa) {
         List<AditivoHistorico> aditivoHistorico = historicoRepository.findByEmpresaNomeIgnoreCase(nomeDaEmpresa);
 
-        if(aditivoHistorico.isEmpty()) {
-            throw new APIExceptions("Nenhum aditivo criado para esta empresa: " + nomeDaEmpresa);
-        }
 
         List<HistoricoResponseDTO> historicoResponseDTOS = aditivoHistorico.stream()
                 .map(HistoricoMapper::fromEntityToDTO)

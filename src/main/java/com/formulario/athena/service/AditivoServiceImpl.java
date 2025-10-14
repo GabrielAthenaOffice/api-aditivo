@@ -35,8 +35,11 @@ public class AditivoServiceImpl implements AditivoService {
     @Autowired
     private DocumentoService documentoService;
 
-    @Value("${aditivo.base-url}")
-    private String baseUrl; // ex: https://api-aditivo-production-ed80.up.railway.app
+    private String baseUrl;
+
+    {
+        baseUrl = "http://localhost:5000";
+    }
 
     @Override
     @Transactional
@@ -80,7 +83,9 @@ public class AditivoServiceImpl implements AditivoService {
             System.out.println(">>> 8. Histórico salvo");
 
             // URL ABSOLUTA E ROTA PADRÃO
-            String urlDownload = String.format("%s/aditivos/%s/download", trimRight(baseUrl), salvo.getId());
+            String urlDownload = String.format("%s/aditivos/%s/download",
+                    baseUrl != null ? trimRight(baseUrl) : "http://localhost:8080",
+                    salvo.getId());
 
             return new AditivoResponseDTO("SUCESSO",
                     "Aditivo registrado e documento gerado com sucesso",
@@ -109,10 +114,6 @@ public class AditivoServiceImpl implements AditivoService {
         Page<AditivoContratual> aditivoPage = aditivoRepository.findAll(pageDetails);
 
         List<AditivoContratual> aditivos = aditivoPage.getContent();
-
-        if(aditivos.isEmpty()) {
-            throw new APIExceptions("Nenhum aditivo criado até o momento");
-        }
 
         List<AditivoSimpleResponseDTO> aditivoResponseLists = aditivos.stream()
                 .map(AditivoMapper::toSimpleResponse)
