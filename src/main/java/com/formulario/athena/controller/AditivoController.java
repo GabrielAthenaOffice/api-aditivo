@@ -10,12 +10,21 @@ import com.formulario.athena.service.AditivoService;
 import com.formulario.athena.service.HistoricoService;
 import jakarta.validation.Valid;
 import lombok.extern.java.Log;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.gridfs.GridFsTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -31,6 +40,9 @@ public class AditivoController {
 
     @Autowired
     private AditivoRepository aditivoRepository;
+
+    @Autowired
+    private GridFsTemplate gridFsTemplate;
 
     @Autowired
     private DocumentoService documentoService;
@@ -78,7 +90,7 @@ public class AditivoController {
     }
 
     @DeleteMapping("empresa/deletar-aditivo/{id}")
-    public ResponseEntity<AditivoSimpleResponseDTO> deletarAditivo(@PathVariable Long id) {
+    public ResponseEntity<AditivoSimpleResponseDTO> deletarAditivo(@PathVariable String id) {
         AditivoSimpleResponseDTO aditivoSimpleResponseDTO = aditivoService.deleteAditivo(id);
 
         return new ResponseEntity<>(aditivoSimpleResponseDTO, HttpStatus.OK);
@@ -90,54 +102,47 @@ public class AditivoController {
         return "TESTE OK";
     }
 
-    /*@CrossOrigin(
-            origins = {
-                    "https://front-correspondencias-athena.vercel.app",
-                    "http://localhost:5173", "http://127.0.0.1:5173"
-            },
-            allowCredentials = "false",
-            exposedHeaders = { "Content-Disposition","Content-Length","Content-Type" }
-    )*/
     @GetMapping(
             value = "/{id}/download",
             produces = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
     public ResponseEntity<byte[]> downloadAditivo(@PathVariable String id) {
-        try {
-            AditivoContratual aditivo = aditivoService.findById(id);
+        AditivoContratual a = aditivoService.findById(id);
 
-            byte[] documentoBytes = aditivo.getDocumentoBytes();
+        // Se não existir arquivo (migração/legado), gera agora e sobe pro GridFS:
+        if (a.getArquivoGridFsId() == null || a.getArquivoGridFsId().isBlank()) {
+            byte[] novo = documentoService.gerarAditivoContratual(a);
+            ObjectId gridId = gridFsTemplate.store(new ByteArrayInputStream(novo),
+                    "aditivo_"+a.getId()+".docx",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            a.setArquivoGridFsId(gridId.toHexString());
+            aditivoRepository.save(a);
+        }
 
-            // Se não existe OU veio vazio do DB, regenere agora
-            if (documentoBytes == null || documentoBytes.length == 0) {
-                log.info("Documento ausente/vazio no DB. Gerando novamente...");
-                documentoBytes = documentoService.gerarAditivoContratual(aditivo);
-                aditivo.setDocumentoBytes(documentoBytes);
-                aditivoRepository.save(aditivo);
-            }
+        var fsFile = gridFsTemplate.findOne(
+                new Query(Criteria.where("_id").is(new ObjectId(a.getArquivoGridFsId())))
+        );
 
-            // Nome do arquivo
-            String nomeArquivo = String.format("aditivo_%s_%s.docx",
-                    aditivo.getPessoaJuridicaNome() != null
-                            ? aditivo.getPessoaJuridicaNome().replaceAll("[^a-zA-Z0-9]", "_")
-                            : "documento",
-                    aditivo.getId());
-
-            String ascii = "filename=\"" + nomeArquivo + "\"";
-            String utf8  = "filename*=UTF-8''" + java.net.URLEncoder.encode(nomeArquivo, java.nio.charset.StandardCharsets.UTF_8);
-
-            // NÃO definir manualmente contentLength — deixe o Spring setar
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; " + ascii + "; " + utf8)
-                    .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-                    .header("Access-Control-Expose-Headers", "Content-Disposition, Content-Length, Content-Type")
-                    .body(documentoBytes);
-
-        } catch (Exception e) {
-            log.severe("Erro no download: " + e.getMessage());
+        var resource = gridFsTemplate.getResource(fsFile);
+        byte[] bytes;
+        try (var is = resource.getInputStream(); var bos = new ByteArrayOutputStream()) {
+            is.transferTo(bos);
+            bytes = bos.toByteArray();
+        } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-    }
 
+        String nome = String.format("aditivo_%s_%s.docx",
+                (a.getPessoaJuridicaNome()!=null ? a.getPessoaJuridicaNome().replaceAll("[^a-zA-Z0-9]", "_") : "documento"),
+                a.getId());
+        String ascii = "filename=\"" + nome + "\"";
+        String utf8  = "filename*=UTF-8''" + URLEncoder.encode(nome, StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; " + ascii + "; " + utf8)
+                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                .header("Access-Control-Expose-Headers", "Content-Disposition, Content-Length, Content-Type")
+                .body(bytes);
+    }
 
 }

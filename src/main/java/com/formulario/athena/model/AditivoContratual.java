@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Document(collection = "aditivos")
 @Data
@@ -42,5 +43,7 @@ public class AditivoContratual {
     private String localData; // necessario ser preenchido automaticamente
     private LocalDateTime criadoEm = LocalDateTime.now();
 
-    private byte[] documentoBytes;
+    private String templateNome;        // qual modelo foi usado
+    private String arquivoGridFsId;     // ObjectId.toHexString()
+    private Map<String, String> placeholdersUsados; // debug/auditoria
 }

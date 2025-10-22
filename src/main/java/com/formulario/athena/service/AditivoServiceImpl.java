@@ -11,15 +11,18 @@ import com.formulario.athena.model.AditivoContratual;
 import com.formulario.athena.model.AditivoHistorico;
 import com.formulario.athena.repository.AditivoRepository;
 import com.formulario.athena.repository.HistoricoRepository;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.gridfs.GridFsTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +37,9 @@ public class AditivoServiceImpl implements AditivoService {
 
     @Autowired
     private DocumentoService documentoService;
+
+    @Autowired
+    private GridFsTemplate gridFsTemplate;
 
     private String baseUrl;
 
@@ -64,8 +70,15 @@ public class AditivoServiceImpl implements AditivoService {
             byte[] documento = documentoService.gerarAditivoContratual(salvo);
             System.out.println(">>> 6. Documento gerado - tamanho: " + documento.length);
 
+            // salva em GridFS
+            ObjectId gridId = gridFsTemplate.store(
+                    new ByteArrayInputStream(documento),
+                    "aditivo_"+aditivo.getId()+".docx",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            );
+
             // SEGUNDO SAVE (com documento)
-            salvo.setDocumentoBytes(documento);
+            salvo.setArquivoGridFsId(gridId.toHexString());
             salvo.setStatus("DOCUMENTO_GERADO");
             AditivoContratual finalSalvo = aditivoRepository.save(salvo);
 
@@ -147,8 +160,8 @@ public class AditivoServiceImpl implements AditivoService {
     }
 
     @Override
-    public AditivoSimpleResponseDTO deleteAditivo(Long aditivoId) {
-        Optional<AditivoContratual> aditivoContratual1 = aditivoRepository.findById(String.valueOf(aditivoId));
+    public AditivoSimpleResponseDTO deleteAditivo(String aditivoId) {
+        Optional<AditivoContratual> aditivoContratual1 = aditivoRepository.findById(aditivoId);
 
         AditivoContratual aditivoContratual = aditivoContratual1.get();
 
