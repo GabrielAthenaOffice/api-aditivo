@@ -3,6 +3,7 @@ package com.formulario.athena.documents;
 import com.deepoove.poi.XWPFTemplate;
 import com.deepoove.poi.config.Configure;
 import com.formulario.athena.model.AditivoContratual;
+import com.formulario.athena.model.TemplateType;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.usermodel.*;
 import org.springframework.core.io.ClassPathResource;
@@ -17,48 +18,41 @@ import java.util.Map;
 @Slf4j
 public class DocumentoService {
 
-    private static final String MODELO_PATH = "templates/AditivoContratual.docx";
+    private static final String TEMPLATE_DIR = "templates/";
 
-    public byte[] gerarAditivoContratual(AditivoContratual aditivo) {
-        try {
-            ClassPathResource modeloResource = new ClassPathResource(MODELO_PATH);
-            if (!modeloResource.exists()) {
-                throw new FileNotFoundException("Template não encontrado no classpath: " + MODELO_PATH);
-            }
+    // NOVO: expõe o mapa de placeholders (base + extras)
+    public Map<String, Object> montarPlaceholders(AditivoContratual ad, TemplateType tt, Map<String, Object> extras) {
+        Map<String, Object> data = criarMapaDadosSimplificado(ad);      // base (unidade, PF, PJ, datas)
+        if (extras != null) data.putAll(extras);           // DTO-only conforme rota
 
-            Map<String, Object> data = criarMapaDadosSimplificado(aditivo);
-            log.info("Gerando documento. Placeholders: {}", data.keySet());
+        // Normaliza null -> ""
+        data.replaceAll((k,v) -> v == null ? "" : v);
 
-            Configure config = Configure.builder().build();
+        // Validação mínima: required do template precisam vir não-vazios
+        for (String r : tt.getRequired()) {
+            Object v = data.get(r);
+            if (v == null || String.valueOf(v).isBlank())
+                throw new IllegalArgumentException("Campo obrigatório ausente/ vazio para template "+tt.getFileBase()+": "+r);
+        }
+        return data;
+    }
 
-            // Fechamento garantido
-            try (var in = modeloResource.getInputStream();
-                 var template = XWPFTemplate.compile(in, config).render(data);
-                 var bos = new ByteArrayOutputStream()) {
 
-                template.write(bos);
-                // template.close() desnecessário com try-with-resources
+    public byte[] gerarAditivoContratual(AditivoContratual aditivo, TemplateType template, Map<String, Object> extras) {
+        String path = TEMPLATE_DIR + template.getFileBase() + ".docx";
+        ClassPathResource modelo = new ClassPathResource(path);
+        if (!modelo.exists()) throw new IllegalStateException("Template não encontrado: " + path);
 
-                byte[] bytes = bos.toByteArray();
-                log.info("✅ DOCX gerado - tamanho: {} bytes", bytes.length);
+        Map<String, Object> data = montarPlaceholders(aditivo, template, extras);
 
-                // Diagnóstico: verificar assinatura ZIP "PK"
-                if (bytes.length >= 2) {
-                    log.info(String.format("Magic bytes: %02X %02X", bytes[0], bytes[1]));
-                }
-
-                if (bytes.length == 0) {
-                    throw new IllegalStateException("Documento gerado com 0 bytes");
-                }
-                if (!(bytes.length >= 2 && bytes[0] == 0x50 && bytes[1] == 0x4B)) {
-                    log.warn("DOCX sem assinatura PK. Verifique template/placeholders.");
-                }
-
-                return bytes;
-            }
-
+        try (var in = modelo.getInputStream();
+             var tpl = XWPFTemplate.compile(in, Configure.builder().build()).render(data);
+             var bos = new ByteArrayOutputStream()) {
+            tpl.write(bos);
+            byte[] bytes = bos.toByteArray();
+            if (bytes.length == 0) throw new IllegalStateException("Documento 0 bytes");
+            return bytes;
         } catch (Exception e) {
-            log.error("❌ Erro ao gerar documento: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao gerar documento: " + e.getMessage(), e);
         }
     }

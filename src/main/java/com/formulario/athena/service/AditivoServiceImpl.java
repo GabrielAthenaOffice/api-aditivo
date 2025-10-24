@@ -9,6 +9,7 @@ import com.formulario.athena.dto.AditivoSimpleResponseDTO;
 import com.formulario.athena.mapper.AditivoMapper;
 import com.formulario.athena.model.AditivoContratual;
 import com.formulario.athena.model.AditivoHistorico;
+import com.formulario.athena.model.TemplateType;
 import com.formulario.athena.repository.AditivoRepository;
 import com.formulario.athena.repository.HistoricoRepository;
 import org.bson.types.ObjectId;
@@ -23,7 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayInputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -47,7 +50,7 @@ public class AditivoServiceImpl implements AditivoService {
         baseUrl = "http://localhost:5000";
     }
 
-    @Override
+    /*@Override
     @Transactional
     public AditivoResponseDTO createAditivo(AditivoRequestDTO dto) {
         try {
@@ -111,11 +114,8 @@ public class AditivoServiceImpl implements AditivoService {
             e.printStackTrace();
             throw new RuntimeException("Erro ao processar aditivo: " + e.getMessage(), e);
         }
-    }
+    }*/
 
-    private String trimRight(String s) {
-        return s != null && s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
-    }
 
     @Override
     public AditivoResponseList listarTodosAditivos(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
@@ -180,5 +180,113 @@ public class AditivoServiceImpl implements AditivoService {
                 .orElseThrow(() -> new RuntimeException("Aditivo não encontrado com ID: " + id));
     }
 
+
+    // ===== Rotas dedicadas
+
+    // --------- contato (email/telefone) ----------
+    @Override
+    @Transactional
+    public AditivoResponseDTO criarContato(AditivoRequestDTO dto, TemplateType tipo) {
+        if (!(tipo == TemplateType.TROCA_EMAIL_PF || tipo == TemplateType.TROCA_EMAIL_PJ
+                || tipo == TemplateType.TROCA_TEL_PF   || tipo == TemplateType.TROCA_TEL_PJ)) {
+            throw new APIExceptions("Template inválido para contato");
+        }
+        validaPFouPJ(dto, tipo);
+        if (tipo == TemplateType.TROCA_EMAIL_PF || tipo == TemplateType.TROCA_EMAIL_PJ)
+            req(dto.getEmail(), "email é obrigatório");
+        if (tipo == TemplateType.TROCA_TEL_PF || tipo == TemplateType.TROCA_TEL_PJ)
+            req(dto.getTelefone(), "telefone é obrigatório");
+
+        Map<String,Object> extras = new HashMap<>();
+        if (dto.getEmail()!=null) extras.put("email", dto.getEmail());
+        if (dto.getTelefone()!=null) extras.put("telefone", dto.getTelefone());
+
+        return criarComTemplate(dto, tipo, extras);
+    }
+
+    // --------- contratual (simples e dois fiadores) ----------
+    @Override
+    @Transactional
+    public AditivoResponseDTO criarContratual(AditivoRequestDTO dto, TemplateType tipo) {
+        if (!(tipo == TemplateType.ADITIVO_CONTRATUAL || tipo == TemplateType.ADITIVO_CONTRATUAL_DOIS_FIADORES))
+            throw new APIExceptions("Template inválido para contratual");
+
+        // precisa PF + PJ
+        req(dto.getPessoaFisicaNome(), "PF nome obrigatório");
+        req(dto.getPessoaFisicaCpf(),  "PF CPF obrigatório");
+        req(dto.getPessoaJuridicaNome(),"PJ nome obrigatório");
+        req(dto.getPessoaJuridicaCnpj(),"PJ CNPJ obrigatório");
+
+        Map<String,Object> extras = new HashMap<>();
+        if (tipo == TemplateType.ADITIVO_CONTRATUAL_DOIS_FIADORES) {
+            req(dto.getSocio(), "socio obrigatório");
+            req(dto.getSocioCpf(), "socioCpf obrigatório");
+            req(dto.getSocioEndereco(), "socioEndereco obrigatório");
+            extras.put("socio", dto.getSocio());
+            extras.put("socioCpf", dto.getSocioCpf());
+            extras.put("socioEndereco", dto.getSocioEndereco());
+        }
+        return criarComTemplate(dto, tipo, extras);
+    }
+
+    // --------- núcleo comum com GridFS ----------
+    private AditivoResponseDTO criarComTemplate(AditivoRequestDTO dto, TemplateType tipo, Map<String,Object> extras) {
+        // DTO -> entidade (sem email/telefone/socio* na entidade)
+        AditivoContratual ad = AditivoMapper.toEntity(dto);
+        ad.setTemplateNome(tipo.getFileBase());
+        ad.setStatus("RECEBIDO");
+
+        // 1º save para obter ID
+        ad = aditivoRepository.save(ad);
+
+        // Mapa de placeholders (auditoria) e geração do DOCX
+        Map<String,Object> ph = documentoService.montarPlaceholders(ad, tipo, extras);
+        byte[] bytes = documentoService.gerarAditivoContratual(ad, tipo, extras);
+
+        // Salva no GridFS
+        ObjectId gridId = gridFsTemplate.store(
+                new ByteArrayInputStream(bytes),
+                "aditivo_" + ad.getId() + ".docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        );
+
+        // Atualiza entidade
+        ad.setArquivoGridFsId(gridId.toHexString());
+        ad.setPlaceholdersUsados(toStringMap(ph));
+        ad.setStatus("DOCUMENTO_GERADO");
+        ad = aditivoRepository.save(ad);
+
+        // Histórico
+        var h = new AditivoHistorico();
+        h.setEmpresaId(Optional.ofNullable(ad.getEmpresaId()).map(Object::toString).orElse(dto.getEmpresaId()));
+        h.setEmpresaNome(ad.getPessoaJuridicaNome());
+        h.setAditivoId(ad.getId());
+        h.setStatus("DOCUMENTO_GERADO");
+        h.setMensagem("Template: " + tipo.getFileBase());
+        historicoRepository.save(h);
+
+        String url = String.format("%s/aditivos/%s/download", trimRight(baseUrl), ad.getId());
+        return new AditivoResponseDTO("SUCESSO", "Aditivo gerado com sucesso", ad.getId(), null, url);
+    }
+
+    private Map<String,String> toStringMap(Map<String,Object> in) {
+        Map<String,String> out = new HashMap<>();
+        in.forEach((k,v) -> out.put(k, v==null? "": String.valueOf(v)));
+        return out;
+    }
+
+    private void validaPFouPJ(AditivoRequestDTO dto, TemplateType tipo) {
+        if (tipo.needsPF()) {
+            req(dto.getPessoaFisicaNome(), "PF nome obrigatório");
+            req(dto.getPessoaFisicaCpf(),  "PF CPF obrigatório");
+        }
+        if (tipo.needsPJ()) {
+            req(dto.getPessoaJuridicaNome(),"PJ nome obrigatório");
+            req(dto.getPessoaJuridicaCnpj(),"PJ CNPJ obrigatório");
+        }
+    }
+
+    private void req(String v, String msg){ if (v==null || v.isBlank()) throw new APIExceptions(msg); }
+    private String trimRight(String s){ return s!=null && s.endsWith("/") ? s.substring(0, s.length()-1) : s; }
 
 }

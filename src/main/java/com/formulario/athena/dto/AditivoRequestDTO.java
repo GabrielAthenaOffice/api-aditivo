@@ -1,52 +1,40 @@
 package com.formulario.athena.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class AditivoRequestDTO {
-    @NotBlank
+
     private String empresaId;
 
-    @NotBlank
     private String unidadeNome;
-
-    @NotBlank
     private String unidadeCnpj;
-
-    @NotBlank
     private String unidadeEndereco;
 
-    @NotBlank
     private String pessoaFisicaNome;
-
-    @NotBlank
     private String pessoaFisicaCpf;
-
-    @NotBlank
     private String pessoaFisicaEndereco;
 
-    @NotNull
     private String dataInicioContrato;
 
-    @NotBlank
     private String pessoaJuridicaNome;
-
-    @NotBlank
     private String pessoaJuridicaCnpj;
-
-    @NotBlank
     private String pessoaJuridicaEndereco;
 
-    @NotBlank
     private String localData;
+
+    //APENAS DTO
+    private String templateNome;
+    private String email;
+    private String telefone;
+
+    private String socio;
+    private String socioCpf;
+    private String socioEndereco;
 }

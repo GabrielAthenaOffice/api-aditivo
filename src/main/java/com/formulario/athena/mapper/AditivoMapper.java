@@ -6,6 +6,7 @@ import com.formulario.athena.dto.AditivoSimpleResponseDTO;
 import com.formulario.athena.model.AditivoContratual;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 public class AditivoMapper {
 
@@ -31,26 +32,43 @@ public class AditivoMapper {
     }
 
     public static AditivoContratual toEntity(AditivoRequestDTO dto) {
-        AditivoContratual aditivo = new AditivoContratual();
-        aditivo.setEmpresaId(Long.valueOf(dto.getEmpresaId()));
+        return AditivoContratual.builder()
+                .empresaId(parseLongSafe(dto.getEmpresaId()))
+                .unidadeNome(dto.getUnidadeNome())
+                .unidadeCnpj(dto.getUnidadeCnpj())
+                .unidadeEndereco(dto.getUnidadeEndereco())
 
-        aditivo.setUnidadeNome(dto.getUnidadeNome());
-        aditivo.setUnidadeCnpj(dto.getUnidadeCnpj());
-        aditivo.setUnidadeEndereco(dto.getUnidadeEndereco());
+                .pessoaFisicaNome(dto.getPessoaFisicaNome())
+                .pessoaFisicaCpf(dto.getPessoaFisicaCpf())
+                .pessoaFisicaEndereco(dto.getPessoaFisicaEndereco())
 
-        aditivo.setPessoaFisicaNome(dto.getPessoaFisicaNome());
-        aditivo.setPessoaFisicaCpf(dto.getPessoaFisicaCpf());
-        aditivo.setPessoaFisicaEndereco(dto.getPessoaFisicaEndereco());
+                .dataInicioContrato(parseDateSafe(dto.getDataInicioContrato())) // << AQUI
 
-        aditivo.setDataInicioContrato(LocalDate.parse(dto.getDataInicioContrato()));
+                .pessoaJuridicaNome(dto.getPessoaJuridicaNome())
+                .pessoaJuridicaCnpj(dto.getPessoaJuridicaCnpj())
+                .pessoaJuridicaEndereco(dto.getPessoaJuridicaEndereco())
 
-        aditivo.setPessoaJuridicaNome(dto.getPessoaJuridicaNome());
-        aditivo.setPessoaJuridicaCnpj(dto.getPessoaJuridicaCnpj());
-        aditivo.setPessoaJuridicaEndereco(dto.getPessoaJuridicaEndereco());
+                .localData(dto.getLocalData())
+                .build();
+    }
 
-        aditivo.setLocalData(dto.getLocalData());
+    private static Long parseLongSafe(String v) {
+        if (v == null || v.isBlank()) return null;
+        try { return Long.parseLong(v); } catch (NumberFormatException e) { return null; }
+    }
 
-        return aditivo;
+    // aceita "yyyy-MM-dd" (input <input type="date"> do front) e "dd/MM/yyyy"
+    private static LocalDate parseDateSafe(String s) {
+        if (s == null || s.isBlank()) return null; // não obriga para templates de contato
+        try {
+            return LocalDate.parse(s); // ISO: yyyy-MM-dd
+        } catch (Exception e) {
+            try {
+                return LocalDate.parse(s, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            } catch (Exception ex) {
+                throw new RuntimeException("dataInicioContrato inválida. Use yyyy-MM-dd ou dd/MM/yyyy");
+            }
+        }
     }
 }
 
