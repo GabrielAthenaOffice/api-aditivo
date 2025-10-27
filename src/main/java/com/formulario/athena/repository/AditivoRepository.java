@@ -12,4 +12,5 @@ public interface AditivoRepository extends MongoRepository<AditivoContratual, St
     List<AditivoContratual> findByEmpresaId(String empresaId);
     Optional<AditivoContratual> findById(String id);
     List<AditivoContratual> findByPessoaJuridicaNomeIgnoreCase(String pessoaJuridicaNome);
+    List<AditivoContratual> findByPessoaJuridicaNomeContainingIgnoreCase(String nome);
 }

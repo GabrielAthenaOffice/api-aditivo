@@ -24,10 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayInputStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class AditivoServiceImpl implements AditivoService {
@@ -145,12 +142,11 @@ public class AditivoServiceImpl implements AditivoService {
 
     @Override
     public List<AditivoSimpleResponseDTO> listarPorNomeEmpresa(String nomeEmpresa) {
-        List<AditivoContratual> aditivoOpt = aditivoRepository.findByPessoaJuridicaNomeIgnoreCase(nomeEmpresa);
+        List<AditivoContratual> aditivoOpt = aditivoRepository.findByPessoaJuridicaNomeContainingIgnoreCase(nomeEmpresa);
 
         if (aditivoOpt.isEmpty()) {
-            throw new APIExceptions("Aditivo não encontrado para a empresa: " + nomeEmpresa);
+            return Collections.emptyList();
         }
-
 
         List<AditivoSimpleResponseDTO> aditivoSimpleResponseDTO = aditivoOpt.stream()
                 .map(AditivoMapper::toSimpleResponse)
@@ -253,7 +249,7 @@ public class AditivoServiceImpl implements AditivoService {
         // Atualiza entidade
         ad.setArquivoGridFsId(gridId.toHexString());
         ad.setPlaceholdersUsados(toStringMap(ph));
-        ad.setStatus("DOCUMENTO_GERADO");
+        ad.setStatus(tipo.getFileBase().toUpperCase());
         ad = aditivoRepository.save(ad);
 
         // Histórico
