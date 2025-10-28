@@ -42,7 +42,6 @@ public class HistoricoService {
     }
 
 
-
     public List<HistoricoResponseDTO> listarHistoricoPorNome(String nomeDaEmpresa) {
         List<AditivoHistorico> aditivoHistorico = historicoRepository.findByEmpresaNomeContainingIgnoreCase(nomeDaEmpresa);
 
