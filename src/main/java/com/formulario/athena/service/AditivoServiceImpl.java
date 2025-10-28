@@ -258,7 +258,7 @@ public class AditivoServiceImpl implements AditivoService {
         h.setEmpresaNome(ad.getPessoaJuridicaNome());
         h.setAditivoId(ad.getId());
         h.setStatus("DOCUMENTO_GERADO");
-        h.setMensagem("Template: " + tipo.getFileBase());
+        h.setMensagem(tipo.getFileBase());
         historicoRepository.save(h);
 
         String url = String.format("%s/aditivos/%s/download", trimRight(baseUrl), ad.getId());
