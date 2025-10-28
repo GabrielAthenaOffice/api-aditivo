@@ -23,34 +23,24 @@ public class HistoricoService {
 
 
     public AditivoResponseHistoricoDTO listarHistoricos(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
-        Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc")
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+        Sort sort = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sort);
+        Page<AditivoHistorico> page = historicoRepository.findAll(pageDetails);
 
-        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
-        Page<AditivoHistorico> aditivoHistoricoPage = historicoRepository.findAll(pageDetails);
-
-        List<AditivoHistorico> aditivoHistoricos = aditivoHistoricoPage.getContent();
-
-        if(aditivoHistoricos.isEmpty()) {
-            throw new APIExceptions("Nenhum aditivo criado até o momento");
-        }
-
-        List<HistoricoResponseDTO> historicoResponseDTOS = aditivoHistoricos.stream()
+        List<HistoricoResponseDTO> content = page.getContent().stream()
                 .map(HistoricoMapper::fromEntityToDTO)
                 .toList();
 
-        AditivoResponseHistoricoDTO aditivoResponseHistoricoDTO = new AditivoResponseHistoricoDTO();
-        aditivoResponseHistoricoDTO.setContent(historicoResponseDTOS);
-        aditivoResponseHistoricoDTO.setPageNumber(aditivoHistoricoPage.getNumber());
-        aditivoResponseHistoricoDTO.setPageSize(aditivoHistoricoPage.getSize());
-        aditivoResponseHistoricoDTO.setTotalElements(aditivoResponseHistoricoDTO.getTotalElements());
-        aditivoResponseHistoricoDTO.setTotalPages(aditivoResponseHistoricoDTO.getTotalPages());
-        aditivoResponseHistoricoDTO.setLastPage(aditivoResponseHistoricoDTO.isLastPage());
-
-        return aditivoResponseHistoricoDTO;
-
+        AditivoResponseHistoricoDTO dto = new AditivoResponseHistoricoDTO();
+        dto.setContent(content);
+        dto.setPageNumber(page.getNumber());
+        dto.setPageSize(page.getSize());
+        dto.setTotalElements(page.getTotalElements());
+        dto.setTotalPages(page.getTotalPages());
+        dto.setLastPage(page.isLast());
+        return dto;
     }
+
 
 
     public List<HistoricoResponseDTO> listarHistoricoPorNome(String nomeDaEmpresa) {
