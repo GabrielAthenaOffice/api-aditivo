@@ -27,6 +27,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
+    private final ApiKeyFilter apiKeyFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -57,6 +58,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
                                 .anyRequest().authenticated()
                 )
+                .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class) // 🔥 API Key primeiro
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
 
@@ -72,15 +74,12 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Configuração consolidada de CORS
+    // Configuração consolidada de CORS (preciso mudar ainda os allowed)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:5173",
-                "https://front-correspondencias-athena-d9yx.vercel.app",
-                "https://front-correspondencias-athena-bmf6jknu5.vercel.app",
-                "https://front-correspondencias-athena.vercel.app"));
+                "http://localhost:5173"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Set-Cookie"));

@@ -1,4 +1,4 @@
 package com.formulario.athena.model;
 
-public enum UserRole { ADMIN, FUNCIONARIO, ESTAGIARIO }
+public enum UserRole { ADMIN, FUNCIONARIO, ESTAGIARIO, SERVICE }
 
