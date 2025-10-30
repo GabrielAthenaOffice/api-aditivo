@@ -83,6 +83,8 @@ public class SecurityConfig {
                 "http://localhost:5173",
                 "http://localhost:3000",
                 "https://aditivo-front.vercel.app",
+                "https://aditivo-front-git-main-cunhazada-no-dales-projects.vercel.app",
+                "https://aditivo-front-rnuruc0zz-cunhazada-no-dales-projects.vercel.app",
                 "https://*.vercel.app"));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
