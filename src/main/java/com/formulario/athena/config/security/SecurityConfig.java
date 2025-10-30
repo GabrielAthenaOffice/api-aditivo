@@ -64,8 +64,8 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
                                 .anyRequest().authenticated()
                 )
-                .addFilterAfter(apiKeyFilter, CorsFilter.class)              // CORS -> API Key
-                .addFilterAfter(securityFilter, ApiKeyFilter.class)          // API Key -> JWT
+                .addFilterAfter(apiKeyFilter, CorsFilter.class) // CORS -> API Key
+                .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class) // API Key -> JWT
                 .build();
 
     }
