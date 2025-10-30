@@ -2,6 +2,7 @@ package com.formulario.athena.config.security;
 
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
@@ -28,6 +30,8 @@ public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
     private final ApiKeyFilter apiKeyFilter;
+
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -60,8 +64,8 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
                                 .anyRequest().authenticated()
                 )
-                .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class) // 🔥 API Key primeiro
-                .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(apiKeyFilter, CorsFilter.class)              // CORS -> API Key
+                .addFilterAfter(securityFilter, ApiKeyFilter.class)          // API Key -> JWT
                 .build();
 
     }
