@@ -1,8 +1,6 @@
 package com.formulario.athena.config.security;
 
-
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,7 +17,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
@@ -29,9 +26,6 @@ import java.util.List;
 public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
-    private final ApiKeyFilter apiKeyFilter;
-
-
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -50,7 +44,6 @@ public class SecurityConfig {
                                         "/swagger-resources/**"
                                 ).permitAll()
                                 // Liberar login e registro
-                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
                                 .requestMatchers("/ws/**").permitAll() // libera websocket + sockJS
@@ -60,12 +53,10 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.POST, "/api/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.PUT, "/api/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
-                                .requestMatchers("/api/aditivos/internal/**").hasRole("SERVICE")
                                 .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
                                 .anyRequest().authenticated()
                 )
-                .addFilterAfter(apiKeyFilter, CorsFilter.class) // CORS -> API Key
-                .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class) // API Key -> JWT
+                .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
 
     }
@@ -91,7 +82,6 @@ public class SecurityConfig {
                 "https://aditivo-front-git-main-cunhazada-no-dales-projects.vercel.app",
                 "https://aditivo-front-rnuruc0zz-cunhazada-no-dales-projects.vercel.app",
                 "https://*.vercel.app"));
-
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Set-Cookie"));
@@ -104,4 +94,3 @@ public class SecurityConfig {
 
 
 }
-
