@@ -54,7 +54,7 @@ public class UserAthena implements UserDetails {
     @Override
     public List<? extends GrantedAuthority> getAuthorities() {
         return switch (role) {
-            case ADMIN -> List.of(
+            case ADMIN, SERVICE -> List.of(
                     new SimpleGrantedAuthority("ROLE_ADMIN"),
                     new SimpleGrantedAuthority("ROLE_FUNCIONARIO")
             );
