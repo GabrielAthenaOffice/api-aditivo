@@ -50,11 +50,14 @@ public class SecurityConfig {
                                 .requestMatchers("/ws/**").permitAll() // libera websocket + sockJS
                                 .requestMatchers("/app/**").permitAll()
 
+                                .requestMatchers(HttpMethod.POST, "/document/**").permitAll() // ou .authenticated() se quiser auth
+                                .requestMatchers(HttpMethod.GET, "/document/**").permitAll()
+
                                 // Regras para API
-                                .requestMatchers(HttpMethod.POST, "/api/**").hasRole("ADMIN")
-                                .requestMatchers(HttpMethod.PUT, "/api/**").hasRole("ADMIN")
-                                .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
-                                .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
+                                .requestMatchers(HttpMethod.POST, "/aditivos/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/aditivos/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/aditivos/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/aditivos/**").authenticated()
                                 .anyRequest().authenticated()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
