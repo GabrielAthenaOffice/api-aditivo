@@ -12,6 +12,7 @@ import com.formulario.athena.model.AditivoHistorico;
 import com.formulario.athena.model.TemplateType;
 import com.formulario.athena.repository.AditivoRepository;
 import com.formulario.athena.repository.HistoricoRepository;
+import jakarta.annotation.PostConstruct;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,8 +42,17 @@ public class AditivoServiceImpl implements AditivoService {
     @Autowired
     private GridFsTemplate gridFsTemplate;
 
-    @Value("${app.public-base-url:https://api-aditivo.onrender.com}")
+    @Value("${app.public-base-url}")
     private String baseUrl;
+
+    @PostConstruct
+    void normalizeBaseUrl() {
+        if (baseUrl == null || baseUrl.isBlank() || baseUrl.contains("localhost")) {
+            baseUrl = "https://api-aditivo.onrender.com";
+        }
+        baseUrl = baseUrl.replaceAll("/+$", "");
+    }
+
 
     @Override
     public AditivoResponseList listarTodosAditivos(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
