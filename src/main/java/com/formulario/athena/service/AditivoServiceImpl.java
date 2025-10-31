@@ -51,6 +51,7 @@ public class AditivoServiceImpl implements AditivoService {
             baseUrl = "https://api-aditivo.onrender.com";
         }
         baseUrl = baseUrl.replaceAll("/+$", "");
+        System.out.println("PUBLIC_BASE_URL=" + baseUrl);
     }
 
 
