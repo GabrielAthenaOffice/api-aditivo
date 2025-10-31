@@ -52,6 +52,9 @@ public class SecurityConfig {
 
                                 .requestMatchers(HttpMethod.POST, "/document/**").permitAll() // ou .authenticated() se quiser auth
                                 .requestMatchers(HttpMethod.GET, "/document/**").permitAll()
+                                // download:
+                                .requestMatchers(HttpMethod.GET, "/aditivos/*/download").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/aditivos/**/download").permitAll()
 
                                 // Regras para API
                                 .requestMatchers(HttpMethod.POST, "/aditivos/**").hasRole("ADMIN")
