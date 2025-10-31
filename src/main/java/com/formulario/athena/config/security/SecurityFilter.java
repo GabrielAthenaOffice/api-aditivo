@@ -72,7 +72,11 @@ public class SecurityFilter extends OncePerRequestFilter {
                 || path.startsWith("/swagger")
                 || path.startsWith("/v3/api-docs")
                 || path.startsWith("/ws")
-                || path.startsWith("/app");
+                || path.startsWith("/app")
+
+                || path.startsWith("/document/")  // Rotas de criação de documento
+                || (path.startsWith("/aditivos/") && path.contains("/download")) // Download de aditivos
+                || path.equals("/aditivos/teste"); // Rota de teste
     }
 
 
